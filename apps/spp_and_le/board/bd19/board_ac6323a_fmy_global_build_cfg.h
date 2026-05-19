@@ -27,8 +27,8 @@
 
 #define CONFIG_FLASH_SIZE                       FLASH_SIZE_512K    //配置FLASH大小
 
-//存放token信息
-#define CONFIG_FINDMY_INFO_ENABLE      		    1		//配置是否支持FINDMY存储
+// trans_data 当前只做直烧联调，不接入 Find My token 打包空间，避免后处理继续查找 *.tkn 文件。
+#define CONFIG_FINDMY_INFO_ENABLE      		    CONFIG_APP_FINDMY		//配置是否支持FINDMY存储
 #if CONFIG_FINDMY_INFO_ENABLE
 #if(CONFIG_FLASH_SIZE == FLASH_SIZE_1M)
 //INI里面有个规则是VM一定会放到最前面
@@ -57,7 +57,11 @@
 /* Following Macros Only For Post Bulid Configuaration */
 
 #define CONFIG_DB_UPDATE_DATA_GENERATE_EN       0       //是否生成db_data.bin(用于第三方协议接入使用)
-#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     1    	//ufw只生成1份4K对齐的代码.findmy要求4K对齐
+#if CONFIG_FINDMY_INFO_ENABLE
+#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     1    	//Find My 升级包要求 4K 对齐
+#else
+#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     0    	//直烧调试阶段不强制生成 4K 对齐 UFW
+#endif
 
 //config for supported chip version
 #ifdef CONFIG_BR30_C_VERSION
@@ -142,4 +146,3 @@
 #endif
 
 #endif
-

@@ -1,0 +1,299 @@
+AW31N 普通广播模式功能说明
+
+说明范围：
+本文用于解释当前 transfer 工程中的“普通广播模式”功能。
+本文将 TCFG_AW31N_PRODUCT_MODE_BADGE 视为当前产品侧的普通广播模式，即：
+1. 非对讲机模式
+2. 仅广播，不做扫描
+3. 以 UUID + SCHOOLID + DEVICEID + BADGE 为核心广播数据
+
+一、模式定义
+普通广播模式用于让模组或手机侧扫描到当前设备的固定身份信息与业务参数。
+当前工程下，普通广播模式的典型编译形态为：
+1. CONFIG_AW31N_SCAN_TEST_ENABLE = 0
+2. CONFIG_AW31N_INTERCOM_MODE_ENABLE = 0
+3. GATT Server 开启
+4. GATT Client 关闭
+
+该模式下设备上电后默认工作在 ADV 广播态，不进入扫描态，也不启用对讲机 GROUP 逻辑。
+
+二、核心功能总览
+普通广播模式当前具备以下功能：
+1. 通过 BLE 广播对外公布设备身份
+2. 广播内容支持 UUID、Major、Minor、Tx Power
+3. 广播内容支持 SCHOOLID、DEVICEID
+4. 广播内容支持 BADGE 业务字段
+5. 串口支持查询/设置上述广播参数
+6. 支持参数掉电保存
+7. 支持参数锁定，防止量产后被误改
+8. 参数修改后可立即重组广播并生效
+9. 串口回包在广播固件中保持文本格式，便于现有产测/联调工具兼容
+
+三、广播包内容
+1. ADV 包
+ADV 包中承载 iBeacon 核心身份字段：
+UUID(16字节) + Major(2字节) + Minor(2字节) + Tx Power(1字节)
+
+当前组织方式为：
+1. Flags
+2. Manufacturer Specific Data(Apple 0x004C)
+3. iBeacon Type 0x02 / Length 0x15
+4. UUID + Major + Minor + Tx
+
+作用：
+1. 作为设备的唯一身份主字段
+2. 供扫描端或 BLE 工具快速识别设备
+
+2. RSP 包
+普通广播模式下，RSP 包用于携带业务字段：
+1. BADGE 数据
+2. SCHOOLID / DEVICEID
+3. 蓝牙名称
+
+当前 RSP 中 SCHOOLID / DEVICEID 使用 Service Data(AD Type 0x16) 携带，
+UUID16 为 0xAF31，数据格式为：
+UUID16(2字节) + SCHOOLID(2字节) + DEVICEID(2字节)
+
+作用：
+1. 供扫描端按 SCHOOLID + DEVICEID 做精确过滤
+2. 供外部工具或模组侧读取业务归属信息
+
+四、广播模式下可配置的参数
+1. UUID
+长度固定 16 字节，串口下发时表现为 32 个十六进制字符。
+
+2. Major
+2 字节，通常与业务规则绑定。
+
+3. Minor
+2 字节，通常与业务规则绑定。
+
+4. Tx Power
+1 字节，写入到 iBeacon 广播结构中。
+
+5. SCHOOLID
+当前普通模式下的学校或组织归属编号。
+
+6. DEVICEID
+当前普通模式下的设备编号。
+
+7. BADGE
+当前实现中为 10 字节业务数据，串口下发时为 20 个十六进制字符。
+
+8. UUID 锁
+用于锁定 UUID / SCHOOLID / DEVICEID 等身份字段，防止误修改。
+
+9. BADGE 锁
+用于锁定 BADGE 字段，防止误修改。
+
+五、串口指令功能
+当前普通广播模式下，主要串口控制能力如下。
+
+1. 模式查询
+命令：
+CMD:MODE?
+
+预期返回：
+MODE:ADV
+
+说明：
+普通广播固件只支持广播，因此查询结果应为 ADV。
+
+2. UUID 参数查询
+命令：
+CMD:UUID?
+
+预期返回示例：
+UUID:HEX=415733314E424C4555558D81F42C3406,MAJOR=3406,MINOR=F42C,TX=C5,PROFILE=PAIR,SCHOOLID=1229,DEVICEID=0001,LOCK=0
+
+说明：
+1. 普通模式回读中 PROFILE 应为 PAIR
+2. 不使用对讲机 GROUP 回读口径
+
+3. UUID 参数整包设置
+命令示例：
+CMD:UUID=415733314E424C4555558D81F42C3406,MAJOR=3406,MINOR=F42C,TX=C5,SCHOOLID=1229,DEVICEID=0001
+
+预期返回示例：
+ACK:UUID,OK,ADV=ON
+
+说明：
+1. 设置成功后会立即重组广播
+2. 参数会写入持久化区域
+
+4. SCHOOLID 单独设置
+命令示例：
+CMD:SCHOOL_ID=1229
+
+预期返回示例：
+ACK:SCHOOL_ID,OK,ADV=ON
+
+说明：
+1. 当前实现支持单独修改 SCHOOL_ID
+2. 修改后广播立即刷新
+3. 回读 CMD:UUID? 可看到新的 SCHOOLID
+
+5. DEVICEID 单独设置
+命令示例：
+CMD:DEVICE_ID=1
+CMD:DEVICE_ID=0001
+
+预期返回示例：
+ACK:DEVICE_ID,OK,ADV=ON
+
+说明：
+1. 当前实现支持非固定 4 位十六进制输入
+2. 回读时统一按 4 位十六进制显示，例如 0001
+
+6. UUID 锁查询
+命令：
+CMD:UUID:LOCK?
+
+预期返回示例：
+UUID:HEX=...,LOCK=0
+或在 CMD:UUID? 中查看 LOCK 字段
+
+7. UUID 锁设置
+命令：
+CMD:UUID:LOCK=1
+CMD:UUID:LOCK=0
+
+预期返回示例：
+ACK:UUID:LOCK=1
+ACK:UUID:LOCK=0
+
+说明：
+锁定后，再尝试改 UUID/SCHOOLID/DEVICEID 会被拒绝。
+
+8. BADGE 设置
+命令示例：
+CMD:BADGE=AA0301026910C20101ED
+
+预期返回示例：
+ACK:BADGE,OK,ADV=ON
+
+说明：
+1. BADGE 长度固定为 10 字节
+2. 输入为 20 个十六进制字符
+3. 设置成功后 RSP 中业务字段同步更新
+
+9. BADGE 查询
+命令：
+CMD:BADGE?
+
+预期返回示例：
+BADGE:HEX=AA0301026910C20101ED
+
+10. BADGE 锁设置
+命令：
+CMD:BADGE:LOCK=1
+CMD:BADGE:LOCK=0
+
+预期返回示例：
+ACK:BADGE:LOCK=1
+ACK:BADGE:LOCK=0
+
+11. BADGE 锁查询
+命令：
+CMD:BADGE:LOCK?
+
+预期返回示例：
+BADGE:LOCK=0
+
+12. 未知命令处理
+对于无法识别的串口命令，当前统一返回：
+ERR:UNKNOWN_CMD
+
+六、参数生效与掉电保存
+普通广播模式下，以下参数支持掉电保存：
+1. UUID
+2. Major
+3. Minor
+4. Tx Power
+5. SCHOOLID
+6. DEVICEID
+7. UUID 锁状态
+8. BADGE
+9. BADGE 锁状态
+
+当前逻辑特点：
+1. 串口设置成功后立即保存
+2. 重启后自动加载上次保存值
+3. 重启后再次执行 CMD:UUID? / CMD:BADGE? 应能回读一致内容
+
+七、BLE 侧表现
+普通广播模式烧录后，外部 BLE 工具通常可以看到以下信息：
+1. 广播名 AW31N_BLE
+2. iBeacon Manufacturer Specific Data
+3. Service Data 0x16 / 0xAF31
+4. 若已设置 BADGE，则 RSP 中带 BADGE 对应字段
+
+因此，普通广播模式本质上不是“只发名字”，而是发三类信息：
+1. 身份主字段：UUID / Major / Minor / Tx
+2. 业务归属字段：SCHOOLID / DEVICEID
+3. 扩展业务字段：BADGE
+
+八、该模式不包含的内容
+普通广播模式当前不包含以下能力：
+1. 不执行扫描上报
+2. 不使用对讲机 GROUP 协议
+3. 不执行 GROUP 过滤
+4. 不输出对讲机模式的 UUID=...,GROUP=... 口径
+5. 不使用扫描 JSON 结果上传链路
+
+九、典型使用场景
+1. 单板作为被扫描设备，对外持续广播身份与业务参数
+2. 产测阶段通过串口写入 UUID / SCHOOLID / DEVICEID / BADGE
+3. 模组端或扫描板按广播内容识别设备归属
+4. 量产后通过 LOCK 防止身份信息被误改
+
+十、与其它模式的区别
+1. 与普通扫描模式的区别
+普通扫描模式负责接收并上报别人广播；
+普通广播模式负责持续发出自己的身份和业务参数。
+
+2. 与对讲机模式的区别
+对讲机模式使用 GROUP 作为核心业务字段；
+普通广播模式使用 SCHOOLID + DEVICEID + BADGE 作为核心业务字段。
+
+十一、当前建议的使用方法
+若目标是“模组端读取一个广播设备的固定身份与业务参数”，建议使用普通广播模式。
+推荐串口配置流程如下：
+1. CMD:UUID=...,MAJOR=...,MINOR=...,TX=...,SCHOOLID=...,DEVICEID=...
+2. CMD:BADGE=...
+3. CMD:UUID?
+4. CMD:BADGE?
+5. CMD:UUID:LOCK=1
+6. CMD:BADGE:LOCK=1
+
+这样可完成：
+1. 身份写入
+2. 业务字段写入
+3. 回读校验
+4. 锁定保护
+
+十二、相关源码位置
+普通广播模式相关实现主要集中在以下文件：
+1. apps/demo/transfer/include/app_config.h
+2. apps/demo/transfer/examples/trans_data/app_trans.c
+3. apps/demo/transfer/examples/trans_data/ble_trans.c
+4. apps/demo/transfer/examples/trans_data/ble_trans.h
+5. apps/demo/transfer/board/bd47/board_aw31n_demo_cfg.h
+
+十三、结论
+当前 SDK 中的普通广播模式，本质上是一个“可通过串口配置并持久化的 BLE 广播身份发布模式”。
+它已经具备：
+1. 固定身份广播
+2. SCHOOLID / DEVICEID 广播
+3. BADGE 广播
+4. 串口查询与设置
+5. 锁定保护
+6. 掉电保存
+
+如果后续要给模组端或第三方做联调，普通广播模式重点关注的就是：
+1. CMD:UUID?
+2. CMD:UUID=...
+3. CMD:SCHOOL_ID=...
+4. CMD:DEVICE_ID=...
+5. CMD:BADGE=...
+6. 广播侧实际空口中的 ADV + RSP 内容

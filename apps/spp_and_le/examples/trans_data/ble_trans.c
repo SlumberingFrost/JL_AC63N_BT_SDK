@@ -31,6 +31,7 @@
 #include "btstack/btstack_event.h"
 #include "gatt_common/le_gatt_common.h"
 #include "ble_trans.h"
+#include "ble_trans_cfg.h"
 #include "ble_trans_profile.h"
 
 #if CONFIG_APP_SPP_LE
@@ -43,6 +44,14 @@
 #define log_info(...)
 #define log_info_hexdump(...)
 #endif
+
+#if CONFIG_APP_SPP_LE
+#ifndef CONFIG_APP_LE_TRANS
+#define CONFIG_APP_LE_TRANS CONFIG_APP_SPP_LE
+#endif
+#endif
+
+#define TRANS_SCHOOL_ID_SVC_UUID16           0xAF31
 
 /*
  打开流控使能后,确定使能接口 att_server_flow_enable 被调用
@@ -119,6 +128,8 @@ static u8  trans_scan_rsp_data[ADV_RSP_PACKET_MAX];//max is 31
 static u8  trans_test_read_write_buf[4];
 static u16 trans_con_handle;
 static adv_cfg_t trans_server_adv_config;
+
+#define TRANS_IBEACON_CFG_VALID 0xA5
 //-------------------------------------------------------------------------------------
 static uint16_t trans_att_read_callback(hci_con_handle_t connection_handle, uint16_t att_handle, uint16_t offset, uint8_t *buffer, uint16_t buffer_size);
 static int trans_att_write_callback(hci_con_handle_t connection_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size);
@@ -389,8 +400,12 @@ static int trans_event_packet_handler(int event, u8 *packet, u16 size, u8 *ext_p
 #endif
 
 #if TCFG_UART0_RX_PORT != NO_CONFIG_PORT
-        //for test 串口数据直通到蓝牙
-        uart_db_regiest_recieve_callback(trans_uart_rx_to_ble);
+        /*
+         * 产品级约束：
+         * 当前项目把 UART0(PA1/PA2) 固定复用为主控配置串口。
+         * 因此 BLE 建链后不能再把同一条 UART0 RX hook 改绑成“串口数据直通 BLE”，
+         * 否则会抢走 trans_cmd_uart 的控制入口。
+         */
 #endif
 
 #if CONFIG_BT_GATT_CLIENT_NUM
@@ -670,6 +685,85 @@ static int trans_att_write_callback(hci_con_handle_t connection_handle, uint16_t
 
 /*************************************************************************************************/
 /*!
+ *  \brief      计算当前offset还能容纳的AD payload长度（不含Length+Type两个字节）
+ *
+ *  \param      [in]
+ *
+ *  \return
+ *
+ *  \note
+ */
+/*************************************************************************************************/
+static uint8_t trans_adv_calc_payload_room(uint16_t offset)
+{
+    if ((offset + 2) > ADV_RSP_PACKET_MAX) {
+        return 0;
+    }
+    return (uint8_t)(ADV_RSP_PACKET_MAX - offset - 2);
+}
+
+/*************************************************************************************************/
+/*!
+ *  \brief      以“写前检查”方式追加EIR整型字段
+ *
+ *  \param      [in]
+ *
+ *  \return
+ *
+ *  \note
+ */
+/*************************************************************************************************/
+static int trans_adv_eir_append_val(uint8_t *buf, uint16_t *offset, uint8_t data_type, uint32_t val, uint8_t val_size)
+{
+    uint16_t cur_offset;
+    uint16_t need_len;
+
+    if (!buf || !offset) {
+        return -1;
+    }
+    cur_offset = *offset;
+    need_len = (uint16_t)val_size + 2;
+    if ((cur_offset + need_len) > ADV_RSP_PACKET_MAX) {
+        log_info("eir_val_skip:type=0x%02x need=%u remain=%u", data_type, need_len,
+                 (cur_offset < ADV_RSP_PACKET_MAX) ? (ADV_RSP_PACKET_MAX - cur_offset) : 0);
+        return -1;
+    }
+    *offset = cur_offset + make_eir_packet_val(&buf[cur_offset], cur_offset, data_type, val, val_size);
+    return 0;
+}
+
+/*************************************************************************************************/
+/*!
+ *  \brief      以“写前检查”方式追加EIR数据字段
+ *
+ *  \param      [in]
+ *
+ *  \return
+ *
+ *  \note
+ */
+/*************************************************************************************************/
+static int trans_adv_eir_append_data(uint8_t *buf, uint16_t *offset, uint8_t data_type, const uint8_t *data, uint8_t data_len)
+{
+    uint16_t cur_offset;
+    uint16_t need_len;
+
+    if (!buf || !offset || !data) {
+        return -1;
+    }
+    cur_offset = *offset;
+    need_len = (uint16_t)data_len + 2;
+    if ((cur_offset + need_len) > ADV_RSP_PACKET_MAX) {
+        log_info("eir_data_skip:type=0x%02x need=%u remain=%u", data_type, need_len,
+                 (cur_offset < ADV_RSP_PACKET_MAX) ? (ADV_RSP_PACKET_MAX - cur_offset) : 0);
+        return -1;
+    }
+    *offset = cur_offset + make_eir_packet_data(&buf[cur_offset], cur_offset, data_type, (void *)data, data_len);
+    return 0;
+}
+
+/*************************************************************************************************/
+/*!
  *  \brief      组织adv包数据，放入buff
  *
  *  \param      [in]
@@ -679,28 +773,48 @@ static int trans_att_write_callback(hci_con_handle_t connection_handle, uint16_t
  *  \note
  */
 /*************************************************************************************************/
-static u8  adv_name_ok = 0;//name 优先存放在ADV包
 static int trans_make_set_adv_data(void)
 {
-    u8 offset = 0;
-    u8 *buf = trans_adv_data;
+    uint16_t offset = 0;
+    uint8_t *buf = trans_adv_data;
+    uint8_t ibeacon[25];
+
+    memset(buf, 0, sizeof(trans_adv_data));
 
 #if DOUBLE_BT_SAME_MAC
-    offset += make_eir_packet_val(&buf[offset], offset, HCI_EIR_DATATYPE_FLAGS, FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_LE_AND_EDR_SAME_CONTROLLER, 1);
+    if (trans_adv_eir_append_val(buf, &offset, HCI_EIR_DATATYPE_FLAGS,
+                                 FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_LE_AND_EDR_SAME_CONTROLLER, 1)) {
+        return -1;
+    }
 #else
-    offset += make_eir_packet_val(&buf[offset], offset, HCI_EIR_DATATYPE_FLAGS, FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_EDR_NOT_SUPPORTED, 1);
+    if (trans_adv_eir_append_val(buf, &offset, HCI_EIR_DATATYPE_FLAGS,
+                                 FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_EDR_NOT_SUPPORTED, 1)) {
+        return -1;
+    }
 #endif
 
-    offset += make_eir_packet_val(&buf[offset], offset, HCI_EIR_DATATYPE_COMPLETE_16BIT_SERVICE_UUIDS, 0xAF30, 2);
-
-    char *gap_name = ble_comm_get_gap_name();
-    u8 name_len = strlen(gap_name);
-    u8 vaild_len = ADV_RSP_PACKET_MAX - (offset + 2);
-    if (name_len < vaild_len) {
-        offset += make_eir_packet_data(&buf[offset], offset, HCI_EIR_DATATYPE_COMPLETE_LOCAL_NAME, (void *)gap_name, name_len);
-        adv_name_ok = 1;
+    if (trans_uuid_ready) {
+        /*
+         * 产品协议约束：
+         * ADV 保持标准 iBeacon 主体，避免把 school/device/badge 再塞回主广播，
+         * 这样扫描侧可以稳定解析 UUID/Major/Minor/TxPower，不受后续业务字段扩展影响。
+         */
+        ibeacon[0] = 0x4C;
+        ibeacon[1] = 0x00;
+        ibeacon[2] = 0x02;
+        ibeacon[3] = 0x15;
+        memcpy(&ibeacon[4], trans_ibeacon_cfg.uuid, 16);
+        ibeacon[20] = (uint8_t)((trans_ibeacon_cfg.major >> 8) & 0xFF);
+        ibeacon[21] = (uint8_t)(trans_ibeacon_cfg.major & 0xFF);
+        ibeacon[22] = (uint8_t)((trans_ibeacon_cfg.minor >> 8) & 0xFF);
+        ibeacon[23] = (uint8_t)(trans_ibeacon_cfg.minor & 0xFF);
+        ibeacon[24] = (uint8_t)trans_ibeacon_cfg.tx_power;
+        if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
+                                      ibeacon, sizeof(ibeacon))) {
+            return -1;
+        }
     } else {
-        adv_name_ok = 0;
+        log_info("adv_build: uuid not ready, keep minimal flags only");
     }
 
     if (offset > ADV_RSP_PACKET_MAX) {
@@ -709,7 +823,7 @@ static int trans_make_set_adv_data(void)
     }
     log_info("trans_adv_data(%d):", offset);
     log_info_hexdump(buf, offset);
-    trans_server_adv_config.adv_data_len = offset;
+    trans_server_adv_config.adv_data_len = (uint8_t)offset;
     trans_server_adv_config.adv_data = trans_adv_data;
     return 0;
 }
@@ -727,22 +841,62 @@ static int trans_make_set_adv_data(void)
 /*************************************************************************************************/
 static int trans_make_set_rsp_data(void)
 {
-    u8 offset = 0;
-    u8 *buf = trans_scan_rsp_data;
+    uint16_t offset = 0;
+    uint8_t *buf = trans_scan_rsp_data;
+    uint8_t school_data[6];
+    uint8_t vaild_len;
+    const char *gap_name = ble_comm_get_gap_name();
+    uint8_t name_len = gap_name ? strlen(gap_name) : 0;
 
-#if RCSP_BTMATE_EN
-    u8  tag_len = sizeof(user_tag_string);
-    offset += make_eir_packet_data(&buf[offset], offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA, (void *)user_tag_string, tag_len);
-#endif
+    memset(buf, 0, sizeof(trans_scan_rsp_data));
 
-    if (!adv_name_ok) {
-        char *gap_name = ble_comm_get_gap_name();
-        u8 name_len = strlen(gap_name);
-        u8 vaild_len = ADV_RSP_PACKET_MAX - (offset + 2);
+    /*
+     * 产品协议约束：
+     * RSP 里的优先级固定为 BADGE -> SCHOOL_ID/DEVICE_ID -> GAP Name。
+     * 当 31 字节空间不足时，业务字段必须优先保留，名称最后截断。
+     */
+    if (trans_badge_adv_data_valid) {
+        vaild_len = trans_adv_calc_payload_room(offset);
+        if (sizeof(trans_badge_adv_data) <= vaild_len) {
+            if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
+                                          trans_badge_adv_data, sizeof(trans_badge_adv_data))) {
+                return -1;
+            }
+        } else {
+            log_info("rsp_badge_skip: need=%u remain=%u", sizeof(trans_badge_adv_data), vaild_len);
+        }
+    }
+
+    if (trans_uuid_ready) {
+        school_data[0] = (uint8_t)(TRANS_SCHOOL_ID_SVC_UUID16 & 0xFF);
+        school_data[1] = (uint8_t)((TRANS_SCHOOL_ID_SVC_UUID16 >> 8) & 0xFF);
+        school_data[2] = (uint8_t)((trans_ibeacon_cfg.school_id >> 8) & 0xFF);
+        school_data[3] = (uint8_t)(trans_ibeacon_cfg.school_id & 0xFF);
+        school_data[4] = (uint8_t)((trans_ibeacon_cfg.device_id >> 8) & 0xFF);
+        school_data[5] = (uint8_t)(trans_ibeacon_cfg.device_id & 0xFF);
+        vaild_len = trans_adv_calc_payload_room(offset);
+        if (sizeof(school_data) <= vaild_len) {
+            if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_SERVICE_DATA,
+                                          school_data, sizeof(school_data))) {
+                return -1;
+            }
+        } else {
+            log_info("rsp_school_skip: need=%u remain=%u", sizeof(school_data), vaild_len);
+        }
+    }
+
+    if (name_len) {
+        vaild_len = trans_adv_calc_payload_room(offset);
         if (name_len > vaild_len) {
+            log_info("rsp_name_trunc: %u -> %u", name_len, vaild_len);
             name_len = vaild_len;
         }
-        offset += make_eir_packet_data(&buf[offset], offset, HCI_EIR_DATATYPE_COMPLETE_LOCAL_NAME, (void *)gap_name, name_len);
+        if (name_len) {
+            if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_COMPLETE_LOCAL_NAME,
+                                          (const uint8_t *)gap_name, name_len)) {
+                return -1;
+            }
+        }
     }
 
     if (offset > ADV_RSP_PACKET_MAX) {
@@ -752,7 +906,7 @@ static int trans_make_set_rsp_data(void)
 
     log_info("rsp_data(%d):", offset);
     log_info_hexdump(buf, offset);
-    trans_server_adv_config.rsp_data_len = offset;
+    trans_server_adv_config.rsp_data_len = (uint8_t)offset;
     trans_server_adv_config.rsp_data = trans_scan_rsp_data;
     return 0;
 }
@@ -775,7 +929,7 @@ static void trans_adv_config_set(void)
     ret |= trans_make_set_rsp_data();
 
     trans_server_adv_config.adv_interval = ADV_INTERVAL_MIN;
-    trans_server_adv_config.adv_auto_do = 1;
+    trans_server_adv_config.adv_auto_do = trans_uuid_ready ? 1 : 0;
     trans_server_adv_config.adv_type = ADV_IND;
     trans_server_adv_config.adv_channel = ADV_CHANNEL_ALL;
     memset(trans_server_adv_config.direct_address_info, 0, 7);
@@ -802,6 +956,8 @@ void trans_server_init(void)
 {
     log_info("%s", __FUNCTION__);
     ble_gatt_server_set_profile(trans_profile_data, sizeof(trans_profile_data));
+    trans_uuid_cfg_load();
+    trans_badge_cfg_load();
     trans_adv_config_set();
 }
 
@@ -1029,6 +1185,108 @@ void ble_module_enable(u8 en)
     ble_comm_module_enable(en);
 }
 
+int trans_uuid_info_get(uint8_t *uuid, uint16_t *major, uint16_t *minor, int8_t *tx_power,
+                        uint8_t *profile, uint16_t *group_id, uint16_t *school_id, uint16_t *device_id,
+                        uint8_t *lock, uint8_t *ready)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)uuid;
+    (void)major;
+    (void)minor;
+    (void)tx_power;
+    (void)profile;
+    (void)group_id;
+    (void)school_id;
+    (void)device_id;
+    (void)lock;
+    (void)ready;
+    return -1;
+#else
+    if (uuid) {
+        memcpy(uuid, trans_ibeacon_cfg.uuid, sizeof(trans_ibeacon_cfg.uuid));
+    }
+    if (major) {
+        *major = trans_ibeacon_cfg.major;
+    }
+    if (minor) {
+        *minor = trans_ibeacon_cfg.minor;
+    }
+    if (tx_power) {
+        *tx_power = trans_ibeacon_cfg.tx_power;
+    }
+    if (profile) {
+        *profile = trans_ibeacon_cfg.profile;
+    }
+    if (group_id) {
+        *group_id = trans_ibeacon_cfg.group_id;
+    }
+    if (school_id) {
+        *school_id = trans_ibeacon_cfg.school_id;
+    }
+    if (device_id) {
+        *device_id = trans_ibeacon_cfg.device_id;
+    }
+    if (lock) {
+        *lock = trans_ibeacon_cfg.lock;
+    }
+    if (ready) {
+        *ready = trans_uuid_ready;
+    }
+    return 0;
+#endif
+}
+
+int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
+                        uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)uuid;
+    (void)major;
+    (void)minor;
+    (void)tx_power;
+    (void)profile;
+    (void)group_id;
+    (void)school_id;
+    (void)device_id;
+    return -1;
+#else
+    if (!uuid) {
+        return -1;
+    }
+    if (profile != TRANS_UUID_PROFILE_PAIR) {
+        return -1;
+    }
+    if (trans_ibeacon_cfg.lock) {
+        return -2;
+    }
+
+    memcpy(trans_ibeacon_cfg.uuid, uuid, sizeof(trans_ibeacon_cfg.uuid));
+    trans_ibeacon_cfg.major = major;
+    trans_ibeacon_cfg.minor = minor;
+    trans_ibeacon_cfg.tx_power = tx_power;
+    trans_ibeacon_cfg.profile = profile;
+    trans_ibeacon_cfg.group_id = group_id;
+    trans_ibeacon_cfg.school_id = school_id;
+    trans_ibeacon_cfg.device_id = device_id;
+    trans_ibeacon_cfg.valid = TRANS_IBEACON_CFG_VALID;
+    trans_uuid_ready = 1;
+
+    if (trans_uuid_cfg_save()) {
+        return -3;
+    }
+
+    ble_gatt_server_adv_enable(0);
+    trans_adv_config_set();
+    ble_gatt_server_adv_enable(1);
+    return 0;
+#endif
+}
+
+uint8_t trans_uuid_is_ready(void)
+{
+    return trans_uuid_ready;
+}
+
 /*************************************************************************************************/
 /*!
  *  \brief      testbox 按键测试
@@ -1053,5 +1311,3 @@ void ble_server_send_test_key_num(u8 key_num)
 
 
 #endif
-
-

@@ -22,9 +22,10 @@
 //                                 UART配置                                        //
 //*********************************************************************************//
 #define TCFG_UART0_ENABLE					ENABLE_THIS_MOUDLE                     //串口打印模块使能
-#define TCFG_UART0_RX_PORT					NO_CONFIG_PORT                         //串口接收脚配置（用于打印可以选择NO_CONFIG_PORT）
-#define TCFG_UART0_TX_PORT  				IO_PORTB_04                            //串口发送脚配置
-#define TCFG_UART0_BAUDRATE  				1000000                                //串口波特率配置
+// 产品调试阶段需要复用 UART0 做双向联调，因此固定到当前工装线序：RX=PA2, TX=PA1。
+#define TCFG_UART0_RX_PORT					IO_PORTA_02                            //串口接收脚配置
+#define TCFG_UART0_TX_PORT  				IO_PORTA_01                            //串口发送脚配置
+#define TCFG_UART0_BAUDRATE  				115200                                 //串口波特率配置
 
 #define UART_DB_TX_PIN                      IO_PORTA_03                            //AT_CHART串口
 #define UART_DB_RX_PIN                      IO_PORTA_04
@@ -42,7 +43,10 @@
 #endif
 
 //#define  LED_KEY_GAPIO_PORT                 IO_PORTA_07
+// 当前 trans_data 方案把 PA1 让给 UART0 TX；只有 Find My 应用才恢复该配对指示灯。
+#if CONFIG_APP_FINDMY
 #define  LED_PAIR_GAPIO_POR                IO_PORTA_01
+#endif
 
 //*********************************************************************************//
 //                                 USB 配置                                        //
@@ -151,7 +155,7 @@
 //*********************************************************************************//
 //                                 adkey 配置                                      //
 //*********************************************************************************//
-#define TCFG_ADKEY_ENABLE                   ENABLE_THIS_MOUDLE //是否使能AD按键
+#define TCFG_ADKEY_ENABLE                   DISABLE_THIS_MOUDLE //是否使能AD按键
 #define TCFG_ADKEY_PORT                     IO_PORTA_09 //AD按键端口(需要注意选择的IO口是否支持AD功能)
 /*AD通道选择，需要和AD按键的端口相对应:
     AD_CH_PA1    AD_CH_PA3    AD_CH_PA4    AD_CH_PA5
@@ -330,7 +334,12 @@
 //#define TCFG_LOWPOWER_POWER_SEL				PWR_DCDC15
 #define TCFG_LOWPOWER_POWER_SEL				PWR_DCDC15                    //电源模式设置，可选DCDC和LDO
 #define TCFG_LOWPOWER_BTOSC_DISABLE			0                            //低功耗模式下BTOSC是否保持
+// UART0 RX 开启后 setup.c 会强制禁止 powerdown，否则日志口接收会丢字符。
+#if TCFG_UART0_RX_PORT != NO_CONFIG_PORT
+#define TCFG_LOWPOWER_LOWPOWER_SEL			0
+#else
 #define TCFG_LOWPOWER_LOWPOWER_SEL			SLEEP_EN                     //SNIFF状态下芯片是否进入powerdown
+#endif
 /*强VDDIO等级配置,可选：
     VDDIOM_VOL_20V    VDDIOM_VOL_22V    VDDIOM_VOL_24V    VDDIOM_VOL_26V
     VDDIOM_VOL_30V    VDDIOM_VOL_30V    VDDIOM_VOL_32V    VDDIOM_VOL_36V*/

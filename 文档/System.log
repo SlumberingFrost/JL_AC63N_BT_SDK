@@ -1,0 +1,166 @@
+
+[10:06:21.575]IN←◆?
+[00:00:00.100]get_chip_id:   190d
+[00:00:00.103]get_vbat_trim: 6
+[00:00:00.106]get_vbg_trim:  3
+[00:00:00.110][0-MSYS]--Reset Source : 0x1
+[00:00:00.114]P11 SYS RESET
+[00:00:00.116][1-P11]--Reset Source : 0x1
+[00:00:00.116]PVDD POR
+[00:00:00.124]=================Version===============
+[00:00:00.130]BTCTRLER-@20240331-$b447f7638
+[00:00:00.134]UPDATE-@20240331-$6854200
+[00:00:00.138]=======================================
+[00:00:00.144][Info]: [SDFILE]VM size: 0x1c000 @ 0x22000
+
+FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF FF FF FF FF FF FF FF FF 
+[00:00:00.163][Info]: [SDFILE]disk capacity 512 KB
+[00:00:00.169]last file_addr:200fe 1020
+[00:00:00.173]end_addr:
+[10:06:21.676]IN←◆22000
+
+49 53 44 55 04 02 59 FF 15 84 17 59 43 1F FF FF 
+[00:00:00.181][Debug]: [SDFILE]sdfile mount succ
+[00:00:00.198][Info]: [BOARD]Power init : D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\apps\spp_and_le\board\bd19\board_ac6323a_fmy.c
+[00:00:00.216]trim: 0, wvdd_lev: 4
+[00:00:00.219][Info]: [SETUP]uart_rx_data 1:
+
+[00:00:00.224]00 
+[00:00:00.226]trim: 0, pvdd_lev: 11, pvdd_lev_l: 5
+[00:00:00.232]adc_add_sample_ch() 0 d ffffffff
+[00:00:00.237]add sample ch d
+[00:00:00.240]adc_add_sample_ch() 0 5000d d
+[00:00:00.245]adc_add_sample_ch() 1 5000d ffffffff
+[00:00:00.250]add sample ch 5000d
+[00:00:00.254]adc_add_sample_ch() 0 3000d d
+[00:00:00.259]adc_add_sample_ch() 1 3000d 5000d
+[00:00:00.264]adc_add_sample_ch() 2 3000d ffffffff
+[00:00:00.269]add sample ch 3000d
+[00:00:00.291]vbg_adc_value = 275
+[00:00:00.313]vbat_adc_value = 274
+[00:00:00.317]vbat = 3228 mv
+[00:00:00.339]dtemp_adc_value = 293
+[00:00:00.342]dtemp = 863 mv
+[00:00:00.347][Info]: [USER_CFG]bt name config:AC632N_1
+
+[00:00:00.353][Info]: [USER_CFG]rf config:10,6
+
+[00:00:00.359][Info]: [USER_CFG]warning_tone_v:240 poweroff_tone_v:230
+
+[00:00:00.367][Info]: [USER_CFG]auto_off_time:0
+
+[00:00:00.373][Info]: [USER_CFG]mac:
+
+4F 21 7F A0 13 61 
+[00:00:00.380][Info]: [USER_CFG]lrc cfg:
+
+E0 01 90 01 E0 01 8C 00 01 
+[00:00:00.393][Info]: [TEST-UPDATE]testbox msg handle reg:1e019f6
+
+[00:00:00.401]app_update_cfg:0,0,1
+[00:00:00.406][Info]: [APP-UPDATE]<--------update_result_deal=0x5a00 b5ae--------->
+
+[00:00:00.415]=================update_param_len:900
+[00:00:00.421]>>>>>>>>>>>>>>>>>app_main...
+[00:00:00.426]>>> v220,2022-11-23 >>>
+[00:00:00.430][Info]: [APP]run app>>> spp_le
+[00:00:00.435][Info]: [APP]May 19 2026,10:00:55
+[00:00:00.440][Info]: [SPP_AND_LE]=======================================
+[00:00:00.448][Info]: [SPP_AND_LE]-----------spp_and_le demo-------------
+[00:00:00.456][Info]: [SPP_AND_LE]=======================================
+[00:00:00.464][Info]: [SPP_AND_LE]app_file: D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\apps\spp_and_le\examples\trans_data\app_spp_and_le.c
+[00:00:00.480][Info]: [COMM_BLE]---ble's address
+
+56 0C 4A A0 13 61 
+[00:00:00.487][BLE_TRANS]bt_ble_before_start_init 
+[00:00:00.492][Info]: [GATT_COMM]ble_comm_init,920
+
+[00:00:00.497][Info]: [GATT_COMM]ble_file: D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\apps\common\third_party_profile\jieli\gatt_common\le_gatt_common.c
+[00:00:00.511][Info]: [GATT_COMM]gatt_config: 1,0
+
+[00:00:00.516][Info]: [GATT_COMM]btstack_config: 1-0-1-0
+
+[00:00:00.522][Info]: [GATT_SERVER]ble_gatt_server_init
+
+[00:00:00.528][Info]: [GATT_COMM]ble_comm_init end
+
+[00:00:00.533]le_support:2 1
+[00:00:00.536]le_config:1 1 0 0
+
+[10:06:22.066]IN←◆[00:00:00.592][Debug]: [LBUF]lbuf misalgin : 0x210664 / 0x826
+[00:00:00.599][Info]: [GATT_COMM]ble_profile_init
+
+[00:00:00.604][Info]: [GATT_SERVER]ble_gatt_server_profile_init
+
+[00:00:00.611]att_send need_size >= 6+1+188
+[00:00:00.615][Info]: [GATT_COMM]ble_profile_init end
+
+[00:00:00.622][Info]: [SPP_AND_LE]----spple_bt_connction_status_event_handler 3
+[00:00:00.629][Info]: [TRANS_CMD_UART]ready: uart0 baud=115200, tx=1, rx=2
+[00:00:00.637][Info]: [COMM_BLE]STATUS_INIT_OK
+
+[00:00:00.642][BLE_TRANS]bt_ble_init
+ 
+[00:00:00.64
+[10:06:22.147]IN←◆6][BLE_TRANS]ble_file: D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\apps\spp_and_le\examples\trans_data\ble_trans.c 
+[00:00:00.657][Info]: [GATT_COMM]ble_comm_set_config_name
+
+[00:00:00.663][Info]: [GATT_COMM]ble name(13): AC632N_1(BLE) 
+
+[00:00:00.669][BLE_TRANS]trans_server_init 
+[00:00:00.674][BLE_TRANS]trans_adv_data(30): 
+02 01 06 1A FF 4C 00 02 15 41 57 33 31 4E 42 4C 
+45 55 55 4F 21 7F A0 13 61 13 61 7F A0 C5 
+[00:00:00.688][BLE_TRANS]rsp_data(23): 
+07 16 31 AF 00 00 00 00 0E 09 41 43 36 33 32 4E 
+5F 31 28 42 4C 45 29 
+
+[10:06:22.196]IN←◆[00:00:00.699][Info]: [GATT_COMM]mode_en:1
+
+[00:00:00.703][Info]: [GATT_SERVER]mode_en:1
+
+[00:00:00.708][Info]: [GATT_SERVER]__gatt_server_just_new_dev_adv
+
+[00:00:00.715][Info]: [GATT_SERVER]new_dev_adv
+
+[00:00:00.720][Info]: [GATT_SERVER]adv_en:1
+
+[00:00:00.724][Info]: [GATT_SERVER]server_work_st:1->20
+
+[00:00:00.730][BLE_TRANS]server_state: handle=00,20
+ 
+[10:07:00.014]OUT→◇PING
+□
+[10:07:00.018]IN←◆
+[00:00:38.540][Info]: [SETUP]uart_rx_data 6:
+
+50 49 4E 47 0D 0A 
+[00:00:38.548][Info]: [TRANS_CMD_UART]rx[6]
+
+50 49 4E 47 0D 0A 
+[00:00:38.554][Info]: [TRANS_CMD_UART]cmd[4]: PING
+ERR:UNKNOWN_CMD
+
+[10:07:04.251]OUT→◇AAA
+□
+[10:07:04.254]IN←◆[00:00:42.778][Info]: [SETUP]uart_rx_data 5:
+
+41 41 41 0D 0A 
+[00:00:42.785][Info]: [TRANS_CMD_UART]rx[5]
+
+41 41 41 0D 0A 
+[00:00:42.791][Info]: [TRANS_CMD_UART]cmd[3]: AAA
+ERR:UNKNOWN_CMD
+
+[10:07:07.929]OUT→◇BBB
+□
+[10:07:07.932]IN←◆[00:00:46.455][Info]: [SETUP]uart_rx_data 5:
+
+42 42 42 0D 0A 
+[00:00:46.462][Info]: [TRANS_CMD_UART]rx[5]
+
+42 42 42 0D 0A 
+[00:00:46.468][Info]: [TRANS_CMD_UART]cmd[3]: BBB
+ERR:UNKNOWN_CMD

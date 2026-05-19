@@ -16,6 +16,7 @@
 #include "app_chargestore.h"
 #include "app_power_manage.h"
 #include "app_comm_bt.h"
+#include "trans_cmd_uart.h"
 #include "usb/device/cdc.h"
 
 #define LOG_TAG_CONST       SPP_AND_LE
@@ -266,6 +267,19 @@ static int spple_bt_connction_status_event_handler(struct bt_event *bt)
 {
     log_info("----%s %d", __FUNCTION__, bt->event);
 
+#if TCFG_USER_BLE_ENABLE
+    if (bt->event == BT_STATUS_INIT_OK) {
+        /*
+         * 产品级要求：
+         * 普通广播模式的产测/配置链路只依赖串口，不依赖手机先建 BLE 连接。
+         * 因此在 BLE init OK 的第一时间拉起独立控制串口，保证设备上电后即可收命令。
+         */
+        if (trans_cmd_uart_init()) {
+            log_error("trans_cmd_uart_init fail");
+        }
+    }
+#endif
+
 #if TCFG_USER_EDR_ENABLE
     bt_comm_edr_status_event_handler(bt);
 #endif
@@ -451,7 +465,14 @@ static int spple_event_handler(struct application *app, struct sys_event *event)
         return 0;
 
     case SYS_DEVICE_EVENT:
-        if ((u32)event->arg == DEVICE_EVENT_FROM_POWER) {
+        if ((u32)event->arg == DEVICE_EVENT_FROM_AT_UART) {
+            /*
+             * 串口控制链路与业务广播解耦：
+             * 当前阶段只把完整命令帧送入 trans_data 的控制入口，
+             * 后续再在这一层之上叠加 UUID/BADGE/JSON 的业务解析器。
+             */
+            trans_cmd_uart_rx_handler();
+        } else if ((u32)event->arg == DEVICE_EVENT_FROM_POWER) {
             return app_power_event_handler(&event->u.dev, spple_set_soft_poweroff);
         }
 
@@ -505,5 +526,4 @@ REGISTER_LP_TARGET(spple_state_lp_target) = {
 };
 
 #endif
-
 

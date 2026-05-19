@@ -77,6 +77,17 @@ const char log_tag_const_d_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_w_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
 
+/*
+ * 普通广播模式新增的独立控制串口模块。
+ * 这里必须补齐 LOG_TAG_CONST 对应常量，否则使用 debug.h 的常量日志模式时会在链接期报
+ * undefined reference to `log_tag_const_*_TRANS_CMD_UART`。
+ */
+const char log_tag_const_v_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_i_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_d_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_w_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_e_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
+
 const char log_tag_const_v_AT_COM AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_i_AT_COM AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_d_AT_COM AT(.LOG_TAG_CONST) = 1;
@@ -240,6 +251,5 @@ const char log_tag_const_i_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_d_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_w_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_FINDMY AT(.LOG_TAG_CONST) = 1;
-
 
 

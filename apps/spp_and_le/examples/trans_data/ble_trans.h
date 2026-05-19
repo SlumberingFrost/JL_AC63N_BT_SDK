@@ -8,6 +8,35 @@
 #include "app_config.h"
 #include "gatt_common/le_gatt_common.h"
 
+#ifndef CONFIG_APP_LE_TRANS
+#define CONFIG_APP_LE_TRANS CONFIG_APP_SPP_LE
+#endif
+
+#ifndef TCFG_TRANS_INTERCOM_MODE_ENABLE
+#define TCFG_TRANS_INTERCOM_MODE_ENABLE      0
+#endif
+#ifndef TCFG_TRANS_UUID_AUTO_DERIVE_FROM_MAC
+#define TCFG_TRANS_UUID_AUTO_DERIVE_FROM_MAC 1
+#endif
+#ifndef TCFG_TRANS_FIXED_GAP_NAME
+#define TCFG_TRANS_FIXED_GAP_NAME            "AW31N_BLE"
+#endif
+#ifndef TCFG_TRANS_UUID_REQUIRE_READY
+#define TCFG_TRANS_UUID_REQUIRE_READY        1
+#endif
+#ifndef TCFG_TRANS_SCAN_SCHOOL_FILTER_DEFAULT_ENABLE
+#define TCFG_TRANS_SCAN_SCHOOL_FILTER_DEFAULT_ENABLE 1
+#endif
+#ifndef TCFG_TRANS_SCAN_SCHOOL_FILTER_DEFAULT_ID
+#define TCFG_TRANS_SCAN_SCHOOL_FILTER_DEFAULT_ID     0x0000
+#endif
+#ifndef TCFG_TRANS_SCAN_DEVICE_FILTER_DEFAULT_ID
+#define TCFG_TRANS_SCAN_DEVICE_FILTER_DEFAULT_ID     0x0000
+#endif
+
+#define TRANS_UUID_PROFILE_PAIR  0
+#define TRANS_UUID_PROFILE_GROUP 1
+
 extern const gatt_client_cfg_t trans_client_init_cfg;
 void trans_client_init(void);
 void trans_client_exit(void);
@@ -16,4 +45,10 @@ int trans_client_search_remote_stop(u16 conn_handle);
 
 void trans_ios_services_init(void);
 void trans_ios_services_exit(void);
+int trans_uuid_info_get(uint8_t *uuid, uint16_t *major, uint16_t *minor, int8_t *tx_power,
+                        uint8_t *profile, uint16_t *group_id, uint16_t *school_id, uint16_t *device_id,
+                        uint8_t *lock, uint8_t *ready);
+int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
+                        uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id);
+uint8_t trans_uuid_is_ready(void);
 #endif

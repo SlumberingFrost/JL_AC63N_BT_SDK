@@ -28,6 +28,9 @@
 // #define		CFG_RCSP_ADV_HIGH_LOW_VOL		 19
 // #define     CFG_RCSP_ADV_EQ_MODE_SETTING     20
 // #define     CFG_RCSP_ADV_EQ_DATA_SETTING     21
+#define     CFG_TRANS_UUID_INFO              19
+#define     CFG_TRANS_BADGE_INFO             20
+#define     CFG_TRANS_SCAN_FILTER_INFO       21
 #define     ADV_SEQ_RAND                     22
 #define     CFG_RCSP_ADV_TIME_STAMP          23
 #define     CFG_RCSP_ADV_WORK_SETTING        24
