@@ -223,7 +223,7 @@ ERR:UNKNOWN_CMD
 
 七、BLE 侧表现
 普通广播模式烧录后，外部 BLE 工具通常可以看到以下信息：
-1. 广播名 AW31N_BLE
+1. 广播名来自 CFG_BT_NAME；当前示例可显示为 AC632N_1(BLE)，若 RSP 空间不足可能被截断为 AC632N_1(
 2. iBeacon Manufacturer Specific Data
 3. Service Data 0x16 / 0xAF31
 4. 若已设置 BADGE，则 RSP 中带 BADGE 对应字段

@@ -56,3 +56,4 @@ filenametags
 cscope.out
 *.bc
 *.ufw
+*.log

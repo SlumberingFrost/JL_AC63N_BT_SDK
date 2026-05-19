@@ -120,11 +120,6 @@ static void (*uart_db_irq_handler_callback)(u8 *packet, u32 size);
 extern void uart_dev_set_irq_handler_hook(void *uart_irq_hook);
 static void uart_db_irq_handler_hook(u8 *rbuf, u32 len)
 {
-    if (len) {
-        log_info("uart_rx_data %d:", len);
-        put_buf(rbuf, len);
-    }
-
     if (uart_db_irq_handler_callback) {
         uart_db_irq_handler_callback(rbuf, len);
     }

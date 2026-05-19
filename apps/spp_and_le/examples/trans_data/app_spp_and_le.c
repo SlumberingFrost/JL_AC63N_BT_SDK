@@ -17,6 +17,7 @@
 #include "app_power_manage.h"
 #include "app_comm_bt.h"
 #include "trans_cmd_uart.h"
+#include "trans_cmd_proc.h"
 #include "usb/device/cdc.h"
 
 #define LOG_TAG_CONST       SPP_AND_LE
@@ -276,6 +277,13 @@ static int spple_bt_connction_status_event_handler(struct bt_event *bt)
          */
         if (trans_cmd_uart_init()) {
             log_error("trans_cmd_uart_init fail");
+        } else {
+            /*
+             * 产品级要求：
+             * 串口驱动层只负责分帧与回包通道，具体业务命令单独挂在 proc 层，
+             * 这样后续扩展 BADGE/LOCK 命令时不需要再改 UART0 接收骨架。
+             */
+            trans_cmd_proc_init();
         }
     }
 #endif
@@ -526,4 +534,3 @@ REGISTER_LP_TARGET(spple_state_lp_target) = {
 };
 
 #endif
-

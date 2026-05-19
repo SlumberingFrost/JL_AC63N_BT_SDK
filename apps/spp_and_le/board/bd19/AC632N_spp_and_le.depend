@@ -154,7 +154,7 @@
 
 1733732446 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6329f_demo_global_build_cfg.h
 
-1779092291 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6323a_fmy_cfg.h
+1779096092 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6323a_fmy_cfg.h
 	"board_ac6323a_fmy_global_build_cfg.h"
 	"usb_std_class_def.h"
 
@@ -841,7 +841,7 @@
 1733732446 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\include_lib\btctrler\classic\tws_data_trans.h
 	"generic/typedef.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\cpu\bd19\setup.c
+1779173113 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\cpu\bd19\setup.c
 	"asm/includes.h"
 	"asm/wdt.h"
 	"asm/debug.h"
@@ -2266,7 +2266,7 @@
 	"typedef.h"
 	"uart.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\third_party_profile\jieli\gatt_common\le_gatt_server.c
+1779173184 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\third_party_profile\jieli\gatt_common\le_gatt_server.c
 	"system/app_core.h"
 	"system/includes.h"
 	"app_config.h"
@@ -4164,7 +4164,7 @@
 	"custom_cfg.h"
 	"le_gatt_common.h"
 
-1779090182 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\app_spp_and_le.c
+1779158214 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\app_spp_and_le.c
 	"system/app_core.h"
 	"system/includes.h"
 	"server/server_core.h"
@@ -4184,6 +4184,7 @@
 	"app_power_manage.h"
 	"app_comm_bt.h"
 	"trans_cmd_uart.h"
+	"trans_cmd_proc.h"
 	"usb/device/cdc.h"
 	"debug.h"
 	"tone_player.h"
@@ -4193,7 +4194,7 @@
 1779090182 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_uart.h
 	<stdint.h>
 
-1778051047 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.c
+1779177060 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.c
 	"system/app_core.h"
 	"system/includes.h"
 	"app_config.h"
@@ -4215,7 +4216,7 @@
 	"ble_trans_cfg.h"
 	"ble_trans_profile.h"
 
-1778051047 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.h
+1779173052 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.h
 	<stdint.h>
 	"app_config.h"
 	"gatt_common/le_gatt_common.h"
@@ -4274,7 +4275,7 @@
 	"le_client_demo.h"
 	"gatt_common/le_gatt_common.h"
 
-1779090226 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_uart.c
+1779173140 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_uart.c
 	"system/includes.h"
 	"app_config.h"
 	"trans_cmd_uart.h"
@@ -4473,7 +4474,7 @@
 	"typedef.h"
 	"system/includes.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\user_cfg.c
+1779177311 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\user_cfg.c
 	"app_config.h"
 	"user_cfg.h"
 	"fs.h"
@@ -4634,4 +4635,14 @@
 	"norflash.h"
 	"debug.h"
 	"uart_update.h"
+
+1779158213 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_proc.h
+
+1779177422 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_proc.c
+	"system/includes.h"
+	"app_config.h"
+	"ble_trans.h"
+	"trans_cmd_uart.h"
+	"trans_cmd_proc.h"
+	"debug.h"
 

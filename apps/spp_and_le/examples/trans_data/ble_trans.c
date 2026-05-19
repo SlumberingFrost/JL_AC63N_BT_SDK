@@ -455,7 +455,6 @@ static int trans_event_packet_handler(int event, u8 *packet, u16 size, u8 *ext_p
         break;
 
     case GATT_COMM_EVENT_SERVER_STATE:
-        log_info("server_state: handle=%02x,%02x\n", little_endian_read_16(packet, 1), packet[0]);
         break;
 
     case GATT_COMM_EVENT_SM_PASSKEY_INPUT: {
@@ -724,8 +723,6 @@ static int trans_adv_eir_append_val(uint8_t *buf, uint16_t *offset, uint8_t data
     cur_offset = *offset;
     need_len = (uint16_t)val_size + 2;
     if ((cur_offset + need_len) > ADV_RSP_PACKET_MAX) {
-        log_info("eir_val_skip:type=0x%02x need=%u remain=%u", data_type, need_len,
-                 (cur_offset < ADV_RSP_PACKET_MAX) ? (ADV_RSP_PACKET_MAX - cur_offset) : 0);
         return -1;
     }
     *offset = cur_offset + make_eir_packet_val(&buf[cur_offset], cur_offset, data_type, val, val_size);
@@ -754,8 +751,6 @@ static int trans_adv_eir_append_data(uint8_t *buf, uint16_t *offset, uint8_t dat
     cur_offset = *offset;
     need_len = (uint16_t)data_len + 2;
     if ((cur_offset + need_len) > ADV_RSP_PACKET_MAX) {
-        log_info("eir_data_skip:type=0x%02x need=%u remain=%u", data_type, need_len,
-                 (cur_offset < ADV_RSP_PACKET_MAX) ? (ADV_RSP_PACKET_MAX - cur_offset) : 0);
         return -1;
     }
     *offset = cur_offset + make_eir_packet_data(&buf[cur_offset], cur_offset, data_type, (void *)data, data_len);
@@ -813,16 +808,12 @@ static int trans_make_set_adv_data(void)
                                       ibeacon, sizeof(ibeacon))) {
             return -1;
         }
-    } else {
-        log_info("adv_build: uuid not ready, keep minimal flags only");
     }
 
     if (offset > ADV_RSP_PACKET_MAX) {
         puts("***trans_adv_data overflow!!!!!!\n");
         return -1;
     }
-    log_info("trans_adv_data(%d):", offset);
-    log_info_hexdump(buf, offset);
     trans_server_adv_config.adv_data_len = (uint8_t)offset;
     trans_server_adv_config.adv_data = trans_adv_data;
     return 0;
@@ -862,8 +853,6 @@ static int trans_make_set_rsp_data(void)
                                           trans_badge_adv_data, sizeof(trans_badge_adv_data))) {
                 return -1;
             }
-        } else {
-            log_info("rsp_badge_skip: need=%u remain=%u", sizeof(trans_badge_adv_data), vaild_len);
         }
     }
 
@@ -880,15 +869,12 @@ static int trans_make_set_rsp_data(void)
                                           school_data, sizeof(school_data))) {
                 return -1;
             }
-        } else {
-            log_info("rsp_school_skip: need=%u remain=%u", sizeof(school_data), vaild_len);
         }
     }
 
     if (name_len) {
         vaild_len = trans_adv_calc_payload_room(offset);
         if (name_len > vaild_len) {
-            log_info("rsp_name_trunc: %u -> %u", name_len, vaild_len);
             name_len = vaild_len;
         }
         if (name_len) {
@@ -904,8 +890,6 @@ static int trans_make_set_rsp_data(void)
         return -1;
     }
 
-    log_info("rsp_data(%d):", offset);
-    log_info_hexdump(buf, offset);
     trans_server_adv_config.rsp_data_len = (uint8_t)offset;
     trans_server_adv_config.rsp_data = trans_scan_rsp_data;
     return 0;
@@ -922,7 +906,7 @@ static int trans_make_set_rsp_data(void)
  *  \note      开广播前配置都有效
  */
 /*************************************************************************************************/
-static void trans_adv_config_set(void)
+static int trans_adv_config_set(void)
 {
     int ret = 0;
     ret |= trans_make_set_adv_data();
@@ -936,9 +920,10 @@ static void trans_adv_config_set(void)
 
     if (ret) {
         log_info("adv_setup_init fail!!!\n");
-        return;
+        return -1;
     }
     ble_gatt_server_set_adv_config(&trans_server_adv_config);
+    return 0;
 }
 
 /*************************************************************************************************/
@@ -958,7 +943,7 @@ void trans_server_init(void)
     ble_gatt_server_set_profile(trans_profile_data, sizeof(trans_profile_data));
     trans_uuid_cfg_load();
     trans_badge_cfg_load();
-    trans_adv_config_set();
+    (void)trans_adv_config_set();
 }
 
 /*************************************************************************************************/
@@ -1108,11 +1093,7 @@ void bt_ble_init(void)
     log_info("%s\n", __FUNCTION__);
     log_info("ble_file: %s", __FILE__);
 
-#if DOUBLE_BT_SAME_NAME
     ble_comm_set_config_name(bt_get_local_name(), 0);
-#else
-    ble_comm_set_config_name(bt_get_local_name(), 1);
-#endif
     trans_con_handle = 0;
     trans_server_init();
 
@@ -1236,8 +1217,139 @@ int trans_uuid_info_get(uint8_t *uuid, uint16_t *major, uint16_t *minor, int8_t 
 #endif
 }
 
-int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
-                        uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id)
+static int trans_adv_apply_now(void)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    return -1;
+#else
+    ble_gatt_server_adv_enable(0);
+    if (trans_adv_config_set()) {
+        return -1;
+    }
+    if (trans_uuid_ready) {
+        ble_gatt_server_adv_enable(1);
+    }
+    return 0;
+#endif
+}
+
+int trans_badge_payload_set(const uint8_t *payload, uint8_t len)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)payload;
+    (void)len;
+    return -4;
+#else
+    if (!payload || len != sizeof(trans_badge_adv_data)) {
+        return -1;
+    }
+    if (trans_badge_cfg.lock) {
+        return -2;
+    }
+
+    if (trans_badge_adv_data_valid &&
+        !memcmp(trans_badge_adv_data, payload, sizeof(trans_badge_adv_data))) {
+        return 0;
+    }
+
+    memcpy(trans_badge_adv_data, payload, sizeof(trans_badge_adv_data));
+    trans_badge_adv_data_valid = 1;
+    memcpy(trans_badge_cfg.payload, payload, sizeof(trans_badge_cfg.payload));
+    trans_badge_cfg.valid = TRANS_BADGE_CFG_VALID;
+    if (trans_badge_cfg_save()) {
+        return -5;
+    }
+    if (trans_adv_apply_now()) {
+        return -3;
+    }
+    return 0;
+#endif
+}
+
+uint8_t trans_badge_payload_is_valid(void)
+{
+#if CONFIG_BT_GATT_SERVER_NUM
+    return trans_badge_adv_data_valid ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
+int trans_badge_payload_get(uint8_t *payload, uint8_t len)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)payload;
+    (void)len;
+    return -4;
+#else
+    if (!payload || len < sizeof(trans_badge_adv_data)) {
+        return -1;
+    }
+    if (!trans_badge_adv_data_valid) {
+        return -2;
+    }
+    memcpy(payload, trans_badge_adv_data, sizeof(trans_badge_adv_data));
+    return sizeof(trans_badge_adv_data);
+#endif
+}
+
+int trans_badge_lock_get(uint8_t *lock, uint8_t *ready)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)lock;
+    (void)ready;
+    return -4;
+#else
+    if (lock) {
+        *lock = trans_badge_cfg.lock ? 1 : 0;
+    }
+    if (ready) {
+        *ready = trans_badge_adv_data_valid ? 1 : 0;
+    }
+    return 0;
+#endif
+}
+
+uint8_t trans_badge_is_locked(void)
+{
+#if CONFIG_BT_GATT_SERVER_NUM
+    return trans_badge_cfg.lock ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
+int trans_badge_lock_set(uint8_t lock)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)lock;
+    return -4;
+#else
+    uint8_t old_lock;
+
+    if (lock > 1) {
+        return -1;
+    }
+    if (!trans_badge_adv_data_valid) {
+        return -5;
+    }
+    if (trans_badge_cfg.lock == lock) {
+        return 0;
+    }
+
+    old_lock = trans_badge_cfg.lock;
+    trans_badge_cfg.lock = lock;
+    if (trans_badge_cfg_save()) {
+        trans_badge_cfg.lock = old_lock;
+        return -3;
+    }
+    return 0;
+#endif
+}
+
+int trans_uuid_info_set_ex(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
+                           uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id,
+                           uint8_t apply_adv_now)
 {
 #if !CONFIG_BT_GATT_SERVER_NUM
     (void)uuid;
@@ -1248,7 +1360,8 @@ int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int
     (void)group_id;
     (void)school_id;
     (void)device_id;
-    return -1;
+    (void)apply_adv_now;
+    return -4;
 #else
     if (!uuid) {
         return -1;
@@ -1258,6 +1371,17 @@ int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int
     }
     if (trans_ibeacon_cfg.lock) {
         return -2;
+    }
+    if (trans_uuid_ready &&
+        !memcmp(trans_ibeacon_cfg.uuid, uuid, sizeof(trans_ibeacon_cfg.uuid)) &&
+        trans_ibeacon_cfg.major == major &&
+        trans_ibeacon_cfg.minor == minor &&
+        trans_ibeacon_cfg.tx_power == tx_power &&
+        trans_ibeacon_cfg.profile == profile &&
+        trans_ibeacon_cfg.group_id == group_id &&
+        trans_ibeacon_cfg.school_id == school_id &&
+        trans_ibeacon_cfg.device_id == device_id) {
+        return 0;
     }
 
     memcpy(trans_ibeacon_cfg.uuid, uuid, sizeof(trans_ibeacon_cfg.uuid));
@@ -1274,12 +1398,53 @@ int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int
     if (trans_uuid_cfg_save()) {
         return -3;
     }
-
-    ble_gatt_server_adv_enable(0);
-    trans_adv_config_set();
-    ble_gatt_server_adv_enable(1);
+    if (apply_adv_now && trans_adv_apply_now()) {
+        return -3;
+    }
     return 0;
 #endif
+}
+
+int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
+                        uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id)
+{
+    return trans_uuid_info_set_ex(uuid, major, minor, tx_power, profile, group_id, school_id, device_id, 1);
+}
+
+int trans_uuid_lock_set(uint8_t lock)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    (void)lock;
+    return -4;
+#else
+    uint8_t old_lock;
+
+    if (lock > 1) {
+        return -1;
+    }
+    if (!trans_uuid_ready) {
+        return -5;
+    }
+    if (trans_ibeacon_cfg.lock == lock) {
+        return 0;
+    }
+
+    old_lock = trans_ibeacon_cfg.lock;
+    trans_ibeacon_cfg.lock = lock;
+    if (trans_uuid_cfg_save()) {
+        trans_ibeacon_cfg.lock = old_lock;
+        return -3;
+    }
+    return 0;
+#endif
+}
+
+uint8_t trans_uuid_is_locked(void)
+{
+#if CONFIG_BT_GATT_SERVER_NUM
+    return trans_ibeacon_cfg.lock ? 1 : 0;
+#endif
+    return 0;
 }
 
 uint8_t trans_uuid_is_ready(void)

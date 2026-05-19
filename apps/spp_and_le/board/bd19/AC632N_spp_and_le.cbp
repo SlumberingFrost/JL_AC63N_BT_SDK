@@ -503,6 +503,8 @@
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/ble_trans_cfg.h" />
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/trans_cmd_uart.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/trans_cmd_uart.h" />
+<Unit filename="../../../../apps/spp_and_le/examples/trans_data/trans_cmd_proc.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/spp_and_le/examples/trans_data/trans_cmd_proc.h" />
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/ble_trans_ios_services.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/ble_trans_profile.h" />
 <Unit filename="../../../../apps/spp_and_le/examples/trans_data/ble_trans_search.c"><Option compilerVer="CC"/></Unit>

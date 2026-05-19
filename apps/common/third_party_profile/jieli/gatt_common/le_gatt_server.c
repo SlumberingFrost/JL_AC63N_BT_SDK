@@ -152,7 +152,6 @@ static void __gatt_server_set_work_state(u16 conn_handle, ble_state_e state, u8 
     if (conn_handle != INVAIL_CONN_HANDLE) {
         ;
     } else if (state != __this->server_work_state) {
-        log_info("server_work_st:%x->%x\n", __this->server_work_state, state);
         __this->server_work_state = state;
         little_endian_store_16(packet_buf, 1, 0);
     } else {
@@ -701,7 +700,6 @@ static void __gatt_server_check_auto_adv(void)
 /*************************************************************************************************/
 static bool __gatt_server_just_new_dev_adv(void)
 {
-    log_info("%s\n", __FUNCTION__);
     u8 state = ble_gatt_server_get_work_state();
 
 #if RCSP_UPDATE_EN
@@ -711,17 +709,14 @@ static bool __gatt_server_just_new_dev_adv(void)
 #endif
 
     if (state != BLE_ST_IDLE && state != BLE_ST_DISCONN && state != BLE_ST_INIT_OK) {
-        log_info("dev_doing,%02x\n", state);
         return false;
     }
 
     s8 tmp_cid = ble_comm_dev_get_idle_index(GATT_ROLE_SERVER);
     if (tmp_cid == INVAIL_INDEX) {
-        log_info("no idle dev to do!!!\n");
         return false;
     }
 
-    log_info("new_dev_adv\n");
     return true;
 }
 
@@ -770,7 +765,6 @@ int ble_gatt_server_adv_enable(u32 en)
     if (cur_state == next_state) {
         return GATT_OP_RET_SUCESS;
     }
-    log_info("adv_en:%d\n", en);
     __gatt_server_set_work_state(INVAIL_CONN_HANDLE, next_state, 1);
 
 #if EXT_ADV_MODE_EN
@@ -1312,5 +1306,3 @@ void ble_get_server_operation_table(struct ble_server_operation_t **interface_pt
 
 
 #endif
-
-

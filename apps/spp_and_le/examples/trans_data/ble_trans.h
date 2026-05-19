@@ -18,9 +18,6 @@
 #ifndef TCFG_TRANS_UUID_AUTO_DERIVE_FROM_MAC
 #define TCFG_TRANS_UUID_AUTO_DERIVE_FROM_MAC 1
 #endif
-#ifndef TCFG_TRANS_FIXED_GAP_NAME
-#define TCFG_TRANS_FIXED_GAP_NAME            "AW31N_BLE"
-#endif
 #ifndef TCFG_TRANS_UUID_REQUIRE_READY
 #define TCFG_TRANS_UUID_REQUIRE_READY        1
 #endif
@@ -45,10 +42,21 @@ int trans_client_search_remote_stop(u16 conn_handle);
 
 void trans_ios_services_init(void);
 void trans_ios_services_exit(void);
+int trans_badge_payload_set(const uint8_t *payload, uint8_t len);
+uint8_t trans_badge_payload_is_valid(void);
+int trans_badge_payload_get(uint8_t *payload, uint8_t len);
+int trans_badge_lock_get(uint8_t *lock, uint8_t *ready);
+int trans_badge_lock_set(uint8_t lock);
+uint8_t trans_badge_is_locked(void);
 int trans_uuid_info_get(uint8_t *uuid, uint16_t *major, uint16_t *minor, int8_t *tx_power,
                         uint8_t *profile, uint16_t *group_id, uint16_t *school_id, uint16_t *device_id,
                         uint8_t *lock, uint8_t *ready);
+int trans_uuid_info_set_ex(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
+                           uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id,
+                           uint8_t apply_adv_now);
 int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int8_t tx_power,
                         uint8_t profile, uint16_t group_id, uint16_t school_id, uint16_t device_id);
+int trans_uuid_lock_set(uint8_t lock);
 uint8_t trans_uuid_is_ready(void);
+uint8_t trans_uuid_is_locked(void);
 #endif

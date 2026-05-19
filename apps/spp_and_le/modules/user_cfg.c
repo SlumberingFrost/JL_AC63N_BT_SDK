@@ -40,8 +40,10 @@ void lp_winsize_init(struct lp_ws_t *lp);
 
 extern APP_VAR app_var;
 
+static const char bt_fixed_local_name[] = "AC6323A";
+
 BT_CONFIG bt_cfg = {
-    .edr_name        = "JL_app_debug",
+    .edr_name        = "AC6323A",
     .mac_addr        = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .tws_local_addr  = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .rf_power        = 10,
@@ -58,6 +60,22 @@ u8 get_max_sys_vol(void)
     //return (audio_cfg.max_sys_vol);
     return 15;
 #endif
+}
+
+static void bt_cfg_apply_fixed_local_name(void)
+{
+    uint16_t name_len = (uint16_t)(sizeof(bt_fixed_local_name) - 1);
+    uint16_t max_len = (uint16_t)sizeof(bt_cfg.edr_name);
+
+    memset(bt_cfg.edr_name, 0x00, sizeof(bt_cfg.edr_name));
+    if (max_len == 0) {
+        return;
+    }
+    if (name_len >= max_len) {
+        name_len = max_len - 1;
+    }
+    memcpy(bt_cfg.edr_name, bt_fixed_local_name, name_len);
+    bt_cfg.edr_name[name_len] = '\0';
 }
 
 #if 1
@@ -150,8 +168,9 @@ const char *bt_get_local_name()
 
 void bt_set_local_name(char *name, u8 len)
 {
-    memcpy(bt_cfg.edr_name, name, len);
-    bt_cfg.edr_name[len] = 0;
+    (void)name;
+    (void)len;
+    bt_cfg_apply_fixed_local_name();
 }
 
 
@@ -211,6 +230,7 @@ void cfg_file_parse(u8 idx)
         memset(bt_cfg.edr_name, 0x00, LOCAL_NAME_LEN);
         memcpy(bt_cfg.edr_name, tmp, ret);
     }
+    bt_cfg_apply_fixed_local_name();
     /* g_printf("bt name config:%s\n", bt_cfg.edr_name); */
     log_info("bt name config:%s\n", bt_cfg.edr_name);
 
@@ -331,11 +351,10 @@ void cfg_file_parse(u8 idx)
     memcpy(bt_cfg.mac_addr, mac_buf, 6);
 
 #if (CONFIG_BT_MODE != BT_NORMAL)
-    const u8 dut_name[]  = "AC693x_DUT";
     const u8 dut_addr[6] = {0x12, 0x34, 0x56, 0x56, 0x34, 0x12};
-    memcpy(bt_cfg.edr_name, dut_name, sizeof(dut_name));
     memcpy(bt_cfg.mac_addr, dut_addr, 6);
 #endif
+    bt_cfg_apply_fixed_local_name();
 
     /*************************************************************************/
     /*                      CFG READ IN isd_config.ini                       */

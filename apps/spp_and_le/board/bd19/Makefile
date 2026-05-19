@@ -396,6 +396,7 @@ c_SRC_FILES := \
 	../../../../apps/spp_and_le/examples/trans_data/ble_trans.c \
 	../../../../apps/spp_and_le/examples/trans_data/ble_trans_cfg.c \
 	../../../../apps/spp_and_le/examples/trans_data/trans_cmd_uart.c \
+	../../../../apps/spp_and_le/examples/trans_data/trans_cmd_proc.c \
 	../../../../apps/spp_and_le/examples/trans_data/ble_trans_ios_services.c \
 	../../../../apps/spp_and_le/examples/trans_data/ble_trans_search.c \
 	../../../../apps/spp_and_le/examples/tuya/app_tuya.c \
