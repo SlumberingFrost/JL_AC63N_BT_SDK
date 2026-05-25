@@ -6,7 +6,11 @@
 #ifdef CONFIG_256K_FLASH
 const int config_update_mode = UPDATE_UART_EN;
 #else
+#if TCFG_TEST_BOX_ENABLE
 const int config_update_mode = UPDATE_BT_LMP_EN | UPDATE_BLE_TEST_EN | UPDATE_APP_EN | UPDATE_UART_EN;
+#else
+const int config_update_mode = UPDATE_APP_EN | UPDATE_UART_EN;
+#endif
 #endif
 
 //是否采用双备份升级方案:0-单备份;1-双备份

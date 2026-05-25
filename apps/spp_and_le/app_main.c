@@ -126,9 +126,6 @@ void app_main()
         update = update_result_deal();
     }
 
-    printf(">>>>>>>>>>>>>>>>>app_main...\n");
-    printf(">>> v220,2022-11-23 >>>\n");
-
     if (get_charge_online_flag()) {
 #if(TCFG_SYS_LVD_EN == 1)
         vbat_check_init();
@@ -217,9 +214,6 @@ void app_main()
 #endif
 
 
-    log_info("run app>>> %s", it.name);
-    log_info("%s,%s", __DATE__, __TIME__);
-
     start_app(&it);
 
 #if TCFG_CHARGE_ENABLE
@@ -270,5 +264,4 @@ __attribute__((used)) int *__errno()
     static int err;
     return &err;
 }
-
 

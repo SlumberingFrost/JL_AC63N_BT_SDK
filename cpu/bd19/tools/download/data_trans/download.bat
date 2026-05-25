@@ -4,9 +4,15 @@ cd %~dp0
 
 set KEY_FILE=..\..\..\..\..\apps\spp_and_le\board\bd19\012AC690X-8029.key
 set KEY_MODE=%TRANS_DATA_KEY_MODE%
+set DOWNLOAD_WAIT_MS=%TRANS_DATA_DOWNLOAD_WAIT_MS%
+set DOWNLOAD_RETRY_COUNT=%TRANS_DATA_DOWNLOAD_RETRY_COUNT%
+set DOWNLOAD_RETRY_DELAY_SEC=%TRANS_DATA_DOWNLOAD_RETRY_DELAY_SEC%
 set DOWNLOAD_RET=0
 
 if "%KEY_MODE%"=="" set KEY_MODE=AUTO
+if "%DOWNLOAD_WAIT_MS%"=="" set DOWNLOAD_WAIT_MS=2000
+if "%DOWNLOAD_RETRY_COUNT%"=="" set DOWNLOAD_RETRY_COUNT=12
+if "%DOWNLOAD_RETRY_DELAY_SEC%"=="" set DOWNLOAD_RETRY_DELAY_SEC=1
 
 copy ..\..\tone.cfg .
 copy ..\..\cfg_tool.bin .
@@ -17,7 +23,7 @@ copy ..\..\script.ver .
 
 if /I "%KEY_MODE%"=="OFF" (
     echo INFO: download without KEY
-    call :run_download
+    call :run_download_with_retry
     set DOWNLOAD_RET=%ERRORLEVEL%
     goto after_download
 )
@@ -28,25 +34,25 @@ if /I "%KEY_MODE%"=="ON" (
         exit /b 1
     )
     echo INFO: download with KEY file: %KEY_FILE%
-    call :run_download -key "%KEY_FILE%"
+    call :run_download_with_retry -key "%KEY_FILE%"
     set DOWNLOAD_RET=%ERRORLEVEL%
     goto after_download
 )
 
 if not exist "%KEY_FILE%" (
     echo WARN: KEY file not found, continue without KEY
-    call :run_download
+    call :run_download_with_retry
     set DOWNLOAD_RET=%ERRORLEVEL%
     goto after_download
 )
 
 echo INFO: auto detect KEY download mode
-call :run_download -key "%KEY_FILE%"
+call :run_download_with_retry -key "%KEY_FILE%"
 set DOWNLOAD_RET=%ERRORLEVEL%
 if "%DOWNLOAD_RET%"=="0" goto after_download
 
 echo WARN: KEY download failed, retry without KEY
-call :run_download
+call :run_download_with_retry
 set DOWNLOAD_RET=%ERRORLEVEL%
 
 :after_download
@@ -88,10 +94,31 @@ rem keep a short delay for downloader teardown; no temp file is created here.
 ping /n 2 127.1>nul
 exit /b %DOWNLOAD_RET%
 
+:run_download_with_retry
+setlocal enabledelayedexpansion
+set RETRY_RET=0
+set RETRY_INDEX=0
+set /a RETRY_PING_COUNT=%DOWNLOAD_RETRY_DELAY_SEC%+1
+
+:retry_loop
+set /a RETRY_INDEX+=1
+echo INFO: download attempt !RETRY_INDEX!/%DOWNLOAD_RETRY_COUNT% wait=%DOWNLOAD_WAIT_MS%ms
+call :run_download %*
+set RETRY_RET=!ERRORLEVEL!
+if "!RETRY_RET!"=="0" (
+    endlocal & exit /b 0
+)
+if !RETRY_INDEX! GEQ %DOWNLOAD_RETRY_COUNT% (
+    endlocal & exit /b %RETRY_RET%
+)
+echo WARN: download attempt !RETRY_INDEX! failed, retry after %DOWNLOAD_RETRY_DELAY_SEC%s
+ping /n !RETRY_PING_COUNT! 127.1>nul
+goto retry_loop
+
 :run_download
 if "%~1"=="" (
-    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress
+    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait %DOWNLOAD_WAIT_MS% -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress
 ) else (
-    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress %*
+    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait %DOWNLOAD_WAIT_MS% -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress %*
 )
 exit /b %ERRORLEVEL%

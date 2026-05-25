@@ -214,7 +214,6 @@ int update_result_deal()
     u8 key_voice_cnt = 0;
     u16 result = 0;
     result = (g_updata_flag & 0xffff);
-    log_info("<--------update_result_deal=0x%x %x--------->\n", result, g_updata_flag >> 16);
 #ifdef  CONFIG_DEBUG_ENABLE
 #if TCFG_APP_BT_EN
     u8 check_update_param_len(void);
@@ -582,7 +581,6 @@ static int app_update_init(void)
 {
     update_module_init(update_common_state_cbk);
     testbox_update_init();
-    printf("app_update_cfg:%d,%d,%d\n", support_dual_bank_update_en, support_norflash_update_en, support_vm_data_keep);
     return 0;
 }
 
@@ -605,4 +603,3 @@ void update_start_exit_sniff(void)
 #endif
     sys_auto_sniff_controle(0, NULL);
 }
-

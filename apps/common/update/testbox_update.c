@@ -24,6 +24,8 @@ void power_set_mode(u8 mode);
 #define LOG_ERROR_ENABLE
 #include "system/debug.h"
 
+#if TCFG_TEST_BOX_ENABLE
+
 extern u8 check_le_conn_disconnet_flag(void);
 extern void ble_app_disconnect(void);
 extern void ll_hci_destory(void);
@@ -246,8 +248,19 @@ defaut:
 void testbox_update_init(void)
 {
     if (UPDATE_MODULE_IS_SUPPORT(UPDATE_BLE_TEST_EN) || UPDATE_MODULE_IS_SUPPORT(UPDATE_BT_LMP_EN)) {
-        log_info("testbox msg handle reg:%x\n", testbox_update_msg_handle);
         btctrler_testbox_update_msg_handle_register(testbox_update_msg_handle);
     }
 }
 
+#else
+
+u8 ble_update_get_ready_jump_flag(void)
+{
+    return 0;
+}
+
+void testbox_update_init(void)
+{
+}
+
+#endif

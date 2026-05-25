@@ -78,7 +78,7 @@ void btstack_ble_start_before_init(const ble_init_cfg_t *cfg, int param)
 
     le_controller_set_mac((void *)tmp_ble_addr);
 
-    log_info("---ble's address");
+    log_info("ble mac:");
     printf_buf((void *)tmp_ble_addr, 6);
 
 #if CONFIG_BT_GATT_COMMON_ENABLE
@@ -152,8 +152,6 @@ int bt_comm_ble_status_event_handler(struct bt_event *bt)
         /*
          * 蓝牙初始化完成
          */
-        log_info("STATUS_INIT_OK\n");
-
 #if TCFG_NORMAL_SET_DUT_MODE
         log_info("set dut mode\n");
         ble_standard_dut_test_init();
@@ -202,5 +200,4 @@ int bt_comm_ble_hci_event_handler(struct bt_event *bt)
 }
 
 #endif
-
 

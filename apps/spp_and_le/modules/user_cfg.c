@@ -231,7 +231,6 @@ void cfg_file_parse(u8 idx)
         memcpy(bt_cfg.edr_name, tmp, ret);
     }
     bt_cfg_apply_fixed_local_name();
-    /* g_printf("bt name config:%s\n", bt_cfg.edr_name); */
     log_info("bt name config:%s\n", bt_cfg.edr_name);
 
 
@@ -248,9 +247,6 @@ void cfg_file_parse(u8 idx)
 #else
     bt_max_pwr_set(app_var.rf_power, 5, 8, SET_BLE_TX_POWER_LEVEL);
 #endif
-
-    /* g_printf("rf config:%d\n", app_var.rf_power); */
-    log_info("rf config:%d,%d\n", app_var.rf_power, SET_BLE_TX_POWER_LEVEL);
 
     app_var.music_volume = 14;
     app_var.wtone_volume = 14;
@@ -284,33 +280,25 @@ void cfg_file_parse(u8 idx)
 #endif
 
 #if USE_CONFIG_LOWPOWER_V_SETTING
-    /* g_printf("auto low power config:\n"); */
-    log_info("auto low power config:\n");
     AUTO_LOWPOWER_V_CONFIG auto_lowpower;
     ret = syscfg_read(CFG_LOWPOWER_V_ID, &auto_lowpower, sizeof(AUTO_LOWPOWER_V_CONFIG));
     if (ret > 0) {
         app_var.warning_tone_v = auto_lowpower.warning_tone_v;
         app_var.poweroff_tone_v = auto_lowpower.poweroff_tone_v;
     }
-    log_info("warning_tone_v:%d poweroff_tone_v:%d\n", app_var.warning_tone_v, app_var.poweroff_tone_v);
 #else
     app_var.warning_tone_v = LOW_POWER_WARN_VAL;
     app_var.poweroff_tone_v = LOW_POWER_OFF_VAL;
-    log_info("warning_tone_v:%d poweroff_tone_v:%d\n", app_var.warning_tone_v, app_var.poweroff_tone_v);
 #endif
 
 #if USE_CONFIG_AUTO_OFF_SETTING
-    /* g_printf("auto off time config:\n"); */
-    log_info("auto off time config:\n");
     AUTO_OFF_TIME_CONFIG auto_off_time;
     ret = syscfg_read(CFG_AUTO_OFF_TIME_ID, &auto_off_time, sizeof(AUTO_OFF_TIME_CONFIG));
     if (ret > 0) {
         app_var.auto_off_time = auto_off_time.auto_off_time * 60;
     }
-    log_info("auto_off_time:%d\n", app_var.auto_off_time)
 #else
     app_var.auto_off_time =  TCFG_AUTO_SHUT_DOWN_TIME;
-    log_info("auto_off_time:%d\n", app_var.auto_off_time);
 #endif
 
     /*************************************************************************/
@@ -343,11 +331,7 @@ void cfg_file_parse(u8 idx)
     if (!memcmp(bt_mac_addr_for_testbox, mac_buf_tmp, 6)) {
         get_random_number(bt_mac_addr_for_testbox, 6);
         syscfg_write(CFG_BT_MAC_ADDR, bt_mac_addr_for_testbox, 6);
-        log_info(">>>init mac addr!!!\n");
     }
-
-    log_info("mac:");
-    log_info_hexdump(mac_buf, sizeof(mac_buf));
     memcpy(bt_cfg.mac_addr, mac_buf, 6);
 
 #if (CONFIG_BT_MODE != BT_NORMAL)
@@ -362,8 +346,6 @@ void cfg_file_parse(u8 idx)
     LRC_CONFIG lrc_cfg;
     ret = syscfg_read(CFG_LRC_ID, &lrc_cfg, sizeof(LRC_CONFIG));
     if (ret > 0) {
-        log_info("lrc cfg:");
-        log_info_hexdump(&lrc_cfg, sizeof(LRC_CONFIG));
         lp_winsize.lrc_ws_inc      = lrc_cfg.lrc_ws_inc;
         lp_winsize.lrc_ws_init     = lrc_cfg.lrc_ws_init;
         lp_winsize.bt_osc_ws_inc   = lrc_cfg.btosc_ws_inc;

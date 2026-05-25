@@ -15,9 +15,19 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
-#define TRANS_CMD_PROC_RESP_SIZE    192
-
 static uint8_t trans_cmd_proc_inited;
+
+typedef struct {
+    char token_text[64];
+    char key_text[24];
+    char value_text[40];
+} trans_cmd_uuid_parse_scratch_t;
+
+/*
+ * 串口命令按行串行处理，这里把 UUID 整包解析临时缓冲挪到静态区，
+ * 避免每次命令分发都在栈上压一组大数组，直接拉高链接期 stack warning。
+ */
+static trans_cmd_uuid_parse_scratch_t trans_cmd_uuid_parse_scratch;
 
 typedef struct {
     uint16_t school_id;
@@ -44,25 +54,6 @@ static int trans_cmd_hex_char_to_val(char c)
         return c - 'A' + 10;
     }
     return -1;
-}
-
-static void trans_cmd_encode_hex_upper(const uint8_t *src, uint8_t src_len, char *dst, uint16_t dst_size)
-{
-    static const char hex_tab[] = "0123456789ABCDEF";
-    uint16_t i;
-
-    if (!src || !dst || dst_size < ((uint16_t)src_len * 2 + 1)) {
-        if (dst && dst_size) {
-            dst[0] = '\0';
-        }
-        return;
-    }
-
-    for (i = 0; i < src_len; i++) {
-        dst[i * 2] = hex_tab[(src[i] >> 4) & 0x0F];
-        dst[i * 2 + 1] = hex_tab[src[i] & 0x0F];
-    }
-    dst[src_len * 2] = '\0';
 }
 
 static int trans_cmd_parse_hex_bytes(const char *text, uint8_t *out, uint8_t out_len)
@@ -227,6 +218,80 @@ static int trans_cmd_parse_u16_auto(const char *text, uint16_t *value)
     return 0;
 }
 
+static int trans_cmd_send_bytes_checked(const uint8_t *buf, uint16_t len)
+{
+    if (!buf || !len) {
+        return -1;
+    }
+    return trans_cmd_uart_send_bytes(buf, len);
+}
+
+static int trans_cmd_send_literal(const char *text)
+{
+    if (!text) {
+        return -1;
+    }
+    return trans_cmd_uart_send_text(text);
+}
+
+static int trans_cmd_send_dec_u16(uint16_t value)
+{
+    char buf[5];
+    uint8_t len = 0;
+    uint16_t tmp = value;
+    uint8_t i = 0;
+
+    do {
+        buf[len++] = (char)('0' + (tmp % 10u));
+        tmp /= 10u;
+    } while (tmp && len < sizeof(buf));
+
+    while (i < (len / 2)) {
+        char t = buf[i];
+        buf[i] = buf[len - 1 - i];
+        buf[len - 1 - i] = t;
+        i++;
+    }
+    return trans_cmd_send_bytes_checked((const uint8_t *)buf, len);
+}
+
+static int trans_cmd_send_hex_u8(uint8_t value)
+{
+    static const char hex_tab[] = "0123456789ABCDEF";
+    char buf[2];
+
+    buf[0] = hex_tab[(value >> 4) & 0x0F];
+    buf[1] = hex_tab[value & 0x0F];
+    return trans_cmd_send_bytes_checked((const uint8_t *)buf, sizeof(buf));
+}
+
+static int trans_cmd_send_hex_u16_4(uint16_t value)
+{
+    static const char hex_tab[] = "0123456789ABCDEF";
+    char buf[4];
+
+    buf[0] = hex_tab[(value >> 12) & 0x0F];
+    buf[1] = hex_tab[(value >> 8) & 0x0F];
+    buf[2] = hex_tab[(value >> 4) & 0x0F];
+    buf[3] = hex_tab[value & 0x0F];
+    return trans_cmd_send_bytes_checked((const uint8_t *)buf, sizeof(buf));
+}
+
+static int trans_cmd_send_hex_buf(const uint8_t *src, uint8_t src_len)
+{
+    uint8_t i;
+
+    if (!src) {
+        return -1;
+    }
+    for (i = 0; i < src_len; i++) {
+        if (trans_cmd_send_hex_u8(src[i])) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 static int trans_cmd_copy_range_trim(const char *start, const char *end, char *dst, uint16_t dst_size)
 {
     uint16_t len;
@@ -267,57 +332,33 @@ static uint8_t trans_cmd_key_equal(const char *lhs, const char *rhs)
 
 static const char *trans_cmd_json_find_field_value(const char *json, const char *key)
 {
-    char pattern[32];
+    size_t key_len;
     const char *p;
 
     if (!json || !key) {
         return NULL;
     }
-    snprintf(pattern, sizeof(pattern), "\"%s\"", key);
-    p = strstr(json, pattern);
-    if (!p) {
-        return NULL;
-    }
-    p += strlen(pattern);
-    while (*p == ' ' || *p == '\t') {
+    key_len = strlen(key);
+    p = json;
+
+    while ((p = strchr(p, '\"')) != NULL) {
         p++;
-    }
-    if (*p != ':') {
-        return NULL;
-    }
-    p++;
-    while (*p == ' ' || *p == '\t') {
-        p++;
-    }
-    return p;
-}
-
-static int trans_cmd_json_parse_string_field(const char *json, const char *key, char *out, uint16_t out_size)
-{
-    const char *p;
-    uint16_t len = 0;
-
-    if (!json || !key || !out || out_size < 2) {
-        return -1;
-    }
-
-    p = trans_cmd_json_find_field_value(json, key);
-    if (!p || *p != '\"') {
-        return -1;
-    }
-    p++;
-
-    while (*p && *p != '\"') {
-        if (len >= (out_size - 1)) {
-            return -1;
+        if (!strncmp(p, key, key_len) && p[key_len] == '\"') {
+            p += key_len + 1;
+            while (*p == ' ' || *p == '\t') {
+                p++;
+            }
+            if (*p != ':') {
+                return NULL;
+            }
+            p++;
+            while (*p == ' ' || *p == '\t') {
+                p++;
+            }
+            return p;
         }
-        out[len++] = *p++;
     }
-    if (*p != '\"') {
-        return -1;
-    }
-    out[len] = '\0';
-    return 0;
+    return NULL;
 }
 
 static int trans_cmd_json_parse_u16_dec_field(const char *json, const char *key, uint16_t *value)
@@ -357,17 +398,24 @@ static int trans_cmd_json_parse_u16_dec_field(const char *json, const char *key,
 
 static int trans_cmd_json_parse_set_params(const char *json, trans_cmd_set_params_t *out)
 {
-    char cmd_name[24];
+    const char *p;
+    const char *expect = "setParams";
 
     if (!json || !out) {
         return -1;
     }
     memset(out, 0, sizeof(*out));
 
-    if (trans_cmd_json_parse_string_field(json, "cmd", cmd_name, sizeof(cmd_name))) {
+    p = trans_cmd_json_find_field_value(json, "cmd");
+    if (!p || *p != '\"') {
         return -1;
     }
-    if (strcmp(cmd_name, "setParams")) {
+    p++;
+    while (*expect && *p == *expect) {
+        p++;
+        expect++;
+    }
+    if (*expect || *p != '\"') {
         return -2;
     }
     if (!trans_cmd_json_parse_u16_dec_field(json, "schoolId", &out->school_id)) {
@@ -382,23 +430,40 @@ static int trans_cmd_json_parse_set_params(const char *json, trans_cmd_set_param
     return 0;
 }
 
-static int trans_cmd_json_resp_set_params(char *resp, uint16_t resp_size, uint8_t ret_code,
-                                          const char *code, uint16_t school_id, uint16_t device_id, uint8_t with_cfg)
+static int trans_cmd_json_send_set_params_result(uint8_t ret_code, const char *code,
+                                                 uint16_t school_id, uint16_t device_id, uint8_t with_cfg)
 {
-    if (!resp || !resp_size) {
-        return 0;
+    if (trans_cmd_send_literal("{\"cmd\":\"setParamsResult\",\"retCode\":")) {
+        return -1;
+    }
+    if (trans_cmd_send_dec_u16(ret_code)) {
+        return -1;
     }
     if (with_cfg) {
-        return snprintf(resp, resp_size,
-                        "{\"cmd\":\"setParamsResult\",\"retCode\":%u,\"schoolId\":%u,\"deviceId\":%u}\r\n",
-                        ret_code, school_id, device_id);
+        if (trans_cmd_send_literal(",\"schoolId\":")) {
+            return -1;
+        }
+        if (trans_cmd_send_dec_u16(school_id)) {
+            return -1;
+        }
+        if (trans_cmd_send_literal(",\"deviceId\":")) {
+            return -1;
+        }
+        if (trans_cmd_send_dec_u16(device_id)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("}\r\n");
     }
     if (code && code[0]) {
-        return snprintf(resp, resp_size,
-                        "{\"cmd\":\"setParamsResult\",\"retCode\":%u,\"code\":\"%s\"}\r\n",
-                        ret_code, code);
+        if (trans_cmd_send_literal(",\"code\":\"")) {
+            return -1;
+        }
+        if (trans_cmd_send_literal(code)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("\"}\r\n");
     }
-    return snprintf(resp, resp_size, "{\"cmd\":\"setParamsResult\",\"retCode\":%u}\r\n", ret_code);
+    return trans_cmd_send_literal("}\r\n");
 }
 
 static int trans_cmd_parse_lock_value(const char *text, uint8_t *lock_val)
@@ -446,11 +511,13 @@ static int trans_cmd_parse_badge_hex_10(const char *text, uint8_t *payload)
 
 static int trans_cmd_adv_reconfig_ok_resp(const char *label)
 {
-    char resp[48];
-    int resp_len;
-
-    resp_len = snprintf(resp, sizeof(resp), "ACK:%s,OK,ADV=ON\r\n", label);
-    return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+    if (trans_cmd_send_literal("ACK:")) {
+        return -1;
+    }
+    if (trans_cmd_send_literal(label)) {
+        return -1;
+    }
+    return trans_cmd_send_literal(",OK,ADV=ON\r\n");
 }
 
 static int trans_cmd_handle_mode_query(void)
@@ -461,20 +528,15 @@ static int trans_cmd_handle_mode_query(void)
 static int trans_cmd_handle_uuid_query(void)
 {
     uint8_t uuid[16];
-    char uuid_hex[33];
-    uint8_t profile = TRANS_UUID_PROFILE_PAIR;
     uint16_t major = 0;
     uint16_t minor = 0;
-    uint16_t group_id = 0;
     uint16_t school_id = 0;
     uint16_t device_id = 0;
     int8_t tx_power = (int8_t)-59;
     uint8_t lock = 0;
     uint8_t ready = 0;
-    char resp[TRANS_CMD_PROC_RESP_SIZE];
-    int resp_len;
 
-    if (trans_uuid_info_get(uuid, &major, &minor, &tx_power, &profile, &group_id,
+    if (trans_uuid_info_get(uuid, &major, &minor, &tx_power, NULL, NULL,
                             &school_id, &device_id, &lock, &ready)) {
         return trans_cmd_uart_send_text("ERR:UUID_PARAM\r\n");
     }
@@ -482,23 +544,37 @@ static int trans_cmd_handle_uuid_query(void)
         return trans_cmd_uart_send_text("ERR:UUID_UNSET\r\n");
     }
 
-    trans_cmd_encode_hex_upper(uuid, sizeof(uuid), uuid_hex, sizeof(uuid_hex));
     /*
      * 当前产品固定为普通广播 PROFILE=PAIR。
      * SCHOOLID 保持十进制，DEVICEID 保持 4 位大写十六进制，兼容现有主控与产测口径。
      */
-    resp_len = snprintf(resp, sizeof(resp),
-                        "UUID:HEX=%s,MAJOR=%04X,MINOR=%04X,TX=%02X,PROFILE=PAIR,SCHOOLID=%u,DEVICEID=%04X,LOCK=%u\r\n",
-                        uuid_hex, major, minor, (uint8_t)tx_power, school_id, device_id, lock ? 1 : 0);
-    return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+    if (trans_cmd_send_literal("UUID:HEX=")) {
+        return -1;
+    }
+    if (trans_cmd_send_hex_buf(uuid, sizeof(uuid))) {
+        return -1;
+    }
+    if (trans_cmd_send_literal(",MAJOR=") ||
+        trans_cmd_send_hex_u16_4(major) ||
+        trans_cmd_send_literal(",MINOR=") ||
+        trans_cmd_send_hex_u16_4(minor) ||
+        trans_cmd_send_literal(",TX=") ||
+        trans_cmd_send_hex_u8((uint8_t)tx_power) ||
+        trans_cmd_send_literal(",PROFILE=PAIR,SCHOOLID=") ||
+        trans_cmd_send_dec_u16(school_id) ||
+        trans_cmd_send_literal(",DEVICEID=") ||
+        trans_cmd_send_hex_u16_4(device_id) ||
+        trans_cmd_send_literal(",LOCK=") ||
+        trans_cmd_send_dec_u16(lock ? 1 : 0)) {
+        return -1;
+    }
+    return trans_cmd_send_literal("\r\n");
 }
 
 static int trans_cmd_handle_uuid_lock_query(void)
 {
     uint8_t lock = 0;
     uint8_t ready = 0;
-    char resp[24];
-    int resp_len;
 
     if (trans_uuid_info_get(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &lock, &ready)) {
         return trans_cmd_uart_send_text("ERR:ADV_NOT_SUPPORTED\r\n");
@@ -507,8 +583,11 @@ static int trans_cmd_handle_uuid_lock_query(void)
         return trans_cmd_uart_send_text("ERR:UUID_UNSET\r\n");
     }
 
-    resp_len = snprintf(resp, sizeof(resp), "UUID:LOCK=%u\r\n", lock ? 1 : 0);
-    return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+    if (trans_cmd_send_literal("UUID:LOCK=") ||
+        trans_cmd_send_dec_u16(lock ? 1 : 0)) {
+        return -1;
+    }
+    return trans_cmd_send_literal("\r\n");
 }
 
 static int trans_cmd_handle_uuid_lock_set(const char *value_text)
@@ -522,9 +601,11 @@ static int trans_cmd_handle_uuid_lock_set(const char *value_text)
 
     ret = trans_uuid_lock_set(lock_val);
     if (ret == 0) {
-        char resp[28];
-        int resp_len = snprintf(resp, sizeof(resp), "ACK:UUID:LOCK=%u\r\n", lock_val);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        if (trans_cmd_send_literal("ACK:UUID:LOCK=") ||
+            trans_cmd_send_dec_u16(lock_val)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("\r\n");
     }
     if (ret == -5) {
         return trans_cmd_uart_send_text("ERR:UUID_UNSET\r\n");
@@ -540,10 +621,9 @@ static int trans_cmd_handle_uuid_lock_set(const char *value_text)
 
 static int trans_cmd_handle_uuid_set(const char *line)
 {
-    char uuid_hex[33];
-    char token_text[64];
-    char key_text[24];
-    char value_text[40];
+    char *token_text = trans_cmd_uuid_parse_scratch.token_text;
+    char *key_text = trans_cmd_uuid_parse_scratch.key_text;
+    char *value_text = trans_cmd_uuid_parse_scratch.value_text;
     uint8_t uuid[16];
     uint8_t ready = 0;
     uint8_t have_major = 0;
@@ -579,8 +659,8 @@ static int trans_cmd_handle_uuid_set(const char *line)
         cursor++;
     }
     token_end = cursor;
-    if (trans_cmd_copy_range_trim(token_start, token_end, uuid_hex, sizeof(uuid_hex)) ||
-        trans_cmd_parse_hex_bytes(uuid_hex, uuid, sizeof(uuid))) {
+    if (trans_cmd_copy_range_trim(token_start, token_end, token_text, sizeof(trans_cmd_uuid_parse_scratch.token_text)) ||
+        trans_cmd_parse_hex_bytes(token_text, uuid, sizeof(uuid))) {
         return trans_cmd_uart_send_text("ERR:UUID_PARAM\r\n");
     }
 
@@ -591,7 +671,7 @@ static int trans_cmd_handle_uuid_set(const char *line)
             cursor++;
         }
         token_end = cursor;
-        if (trans_cmd_copy_range_trim(token_start, token_end, token_text, sizeof(token_text))) {
+        if (trans_cmd_copy_range_trim(token_start, token_end, token_text, sizeof(trans_cmd_uuid_parse_scratch.token_text))) {
             return trans_cmd_uart_send_text("ERR:UUID_PARAM\r\n");
         }
 
@@ -599,8 +679,8 @@ static int trans_cmd_handle_uuid_set(const char *line)
         if (!eq) {
             return trans_cmd_uart_send_text("ERR:UUID_PARAM\r\n");
         }
-        if (trans_cmd_copy_range_trim(token_text, eq, key_text, sizeof(key_text)) ||
-            trans_cmd_copy_range_trim(eq + 1, token_text + strlen(token_text), value_text, sizeof(value_text))) {
+        if (trans_cmd_copy_range_trim(token_text, eq, key_text, sizeof(trans_cmd_uuid_parse_scratch.key_text)) ||
+            trans_cmd_copy_range_trim(eq + 1, token_text + strlen(token_text), value_text, sizeof(trans_cmd_uuid_parse_scratch.value_text))) {
             return trans_cmd_uart_send_text("ERR:UUID_PARAM\r\n");
         }
 
@@ -684,16 +764,15 @@ static int trans_cmd_handle_uuid_set(const char *line)
 static int trans_cmd_handle_badge_query(void)
 {
     uint8_t badge_payload[10];
-    char badge_hex[21];
-    char resp[40];
-    int resp_len;
     int get_ret;
 
     get_ret = trans_badge_payload_get(badge_payload, sizeof(badge_payload));
     if (get_ret > 0) {
-        trans_cmd_encode_hex_upper(badge_payload, sizeof(badge_payload), badge_hex, sizeof(badge_hex));
-        resp_len = snprintf(resp, sizeof(resp), "BADGE:HEX=%s\r\n", badge_hex);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        if (trans_cmd_send_literal("BADGE:HEX=") ||
+            trans_cmd_send_hex_buf(badge_payload, sizeof(badge_payload))) {
+            return -1;
+        }
+        return trans_cmd_send_literal("\r\n");
     }
     if (get_ret == -2) {
         return trans_cmd_uart_send_text("ERR:BADGE_UNSET\r\n");
@@ -739,8 +818,6 @@ static int trans_cmd_handle_badge_lock_query(void)
 {
     uint8_t lock = 0;
     uint8_t ready = 0;
-    char resp[24];
-    int resp_len;
 
     if (trans_badge_lock_get(&lock, &ready) == -4) {
         return trans_cmd_uart_send_text("ERR:ADV_NOT_SUPPORTED\r\n");
@@ -749,8 +826,11 @@ static int trans_cmd_handle_badge_lock_query(void)
         return trans_cmd_uart_send_text("ERR:BADGE_UNSET\r\n");
     }
 
-    resp_len = snprintf(resp, sizeof(resp), "BADGE:LOCK=%u\r\n", lock ? 1 : 0);
-    return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+    if (trans_cmd_send_literal("BADGE:LOCK=") ||
+        trans_cmd_send_dec_u16(lock ? 1 : 0)) {
+        return -1;
+    }
+    return trans_cmd_send_literal("\r\n");
 }
 
 static int trans_cmd_handle_badge_lock_set(const char *value_text)
@@ -764,9 +844,11 @@ static int trans_cmd_handle_badge_lock_set(const char *value_text)
 
     ret = trans_badge_lock_set(lock_val);
     if (ret == 0) {
-        char resp[29];
-        int resp_len = snprintf(resp, sizeof(resp), "ACK:BADGE:LOCK=%u\r\n", lock_val);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        if (trans_cmd_send_literal("ACK:BADGE:LOCK=") ||
+            trans_cmd_send_dec_u16(lock_val)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("\r\n");
     }
     if (ret == -5) {
         return trans_cmd_uart_send_text("ERR:BADGE_UNSET\r\n");
@@ -858,8 +940,6 @@ static int trans_cmd_handle_json_set_params(const char *line)
     uint16_t device_id = 0;
     int8_t tx_power = (int8_t)-59;
     uint8_t ready = 0;
-    char resp[TRANS_CMD_PROC_RESP_SIZE];
-    int resp_len;
     int ret;
 
     ret = trans_cmd_json_parse_set_params(line, &cfg);
@@ -867,18 +947,20 @@ static int trans_cmd_handle_json_set_params(const char *line)
         return -1;
     }
     if (ret) {
-        resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 1, "PARAM", 0, 0, 0);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        return trans_cmd_json_send_set_params_result(1, "PARAM", 0, 0, 0);
     }
 
     ret = trans_uuid_info_get(uuid, &major, &minor, &tx_power, NULL, NULL, &school_id, &device_id, NULL, &ready);
     if (ret || !ready) {
-        resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 1, "UUID_UNSET", 0, 0, 0);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        return trans_cmd_json_send_set_params_result(1, "UUID_UNSET", 0, 0, 0);
     }
     if (cfg.school_id == school_id && cfg.device_id == device_id) {
-        resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 0, NULL, cfg.school_id, cfg.device_id, 1);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        if (trans_broadcast_restart_now()) {
+            return trans_cmd_json_send_set_params_result(1, "ADV_FAIL", 0, 0, 0);
+        }
+        ret = trans_cmd_json_send_set_params_result(0, NULL, cfg.school_id, cfg.device_id, 1);
+        trans_set_params_stop_broadcast_timer_restart();
+        return ret;
     }
 
     /*
@@ -887,27 +969,24 @@ static int trans_cmd_handle_json_set_params(const char *line)
      */
     ret = trans_uuid_info_set(uuid, major, minor, tx_power, TRANS_UUID_PROFILE_PAIR, 0, cfg.school_id, cfg.device_id);
     if (ret == -2) {
-        resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 1, "UUID_LOCKED", 0, 0, 0);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        return trans_cmd_json_send_set_params_result(1, "UUID_LOCKED", 0, 0, 0);
     }
     if (ret) {
-        resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 1, "SAVE_FAIL", 0, 0, 0);
-        return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+        return trans_cmd_json_send_set_params_result(1, "SAVE_FAIL", 0, 0, 0);
     }
 
-    resp_len = trans_cmd_json_resp_set_params(resp, sizeof(resp), 0, NULL, cfg.school_id, cfg.device_id, 1);
-    return trans_cmd_uart_send_bytes((const uint8_t *)resp, (uint16_t)resp_len);
+    ret = trans_cmd_json_send_set_params_result(0, NULL, cfg.school_id, cfg.device_id, 1);
+    trans_set_params_stop_broadcast_timer_restart();
+    return ret;
 }
 
 static int trans_cmd_proc_handle_line(const uint8_t *line, uint16_t len)
 {
-    char text[TRANS_CMD_PROC_RESP_SIZE];
+    const char *text = (const char *)line;
 
-    if (!line || !len || len >= sizeof(text)) {
+    if (!line || !len) {
         return -1;
     }
-    memcpy(text, line, len);
-    text[len] = '\0';
 
     if (!strcmp(text, "CMD:MODE?")) {
         return trans_cmd_handle_mode_query();

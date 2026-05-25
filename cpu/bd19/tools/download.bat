@@ -33,6 +33,7 @@
 
 
 rem @echo off
+setlocal enabledelayedexpansion
 @echo *********************************************************************
 @echo AC632N SDK
 @echo *********************************************************************
@@ -61,13 +62,13 @@ if exist sdk.elf (
 %OBJCOPY% -O binary -j .common %INELF% common.bin
 
 
-bankfiles=
+set bankfiles=
 for /L %%i in (0,1,20) do (
  %OBJCOPY% -O binary -j .overlay_bank%%i %INELF% bank%%i.bin
  set bankfiles=!bankfiles! bank%%i.bin 0x0
 )
 
-echo %bank_files
+echo !bankfiles!
 %LZ4_PACKET% -dict text.bin -input common.bin 0 %bankfiles% -o bank.bin
 
 %OBJDUMP% -section-headers -address-mask=0x1ffffff %INELF%

@@ -59,4 +59,7 @@ int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int
 int trans_uuid_lock_set(uint8_t lock);
 uint8_t trans_uuid_is_ready(void);
 uint8_t trans_uuid_is_locked(void);
+int trans_broadcast_restart_now(void);
+void trans_set_params_stop_broadcast_timer_restart(void);
+void trans_set_params_stop_broadcast_timer_cancel(void);
 #endif

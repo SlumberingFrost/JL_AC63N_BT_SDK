@@ -33,6 +33,7 @@
 #include "ble_trans.h"
 #include "ble_trans_cfg.h"
 #include "ble_trans_profile.h"
+#include "trans_cmd_uart.h"
 
 #if CONFIG_APP_SPP_LE
 
@@ -79,6 +80,7 @@
 
 // 广播周期 (unit:0.625ms)
 #define ADV_INTERVAL_MIN          (160 * 5)//
+#define TRANS_SET_PARAMS_BROADCAST_WINDOW_MS 10000
 
 #define TEST_TRANS_CHANNEL_DATA      0 /*测试记录收发数据速度*/
 #define TEST_TRANS_NOTIFY_HANDLE     ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE /*主动发送hanlde,为空则不测试发数*/
@@ -128,6 +130,7 @@ static u8  trans_scan_rsp_data[ADV_RSP_PACKET_MAX];//max is 31
 static u8  trans_test_read_write_buf[4];
 static u16 trans_con_handle;
 static adv_cfg_t trans_server_adv_config;
+static int trans_set_params_stop_adv_timer;
 
 #define TRANS_IBEACON_CFG_VALID 0xA5
 //-------------------------------------------------------------------------------------
@@ -939,7 +942,6 @@ static int trans_adv_config_set(void)
 /*************************************************************************************************/
 void trans_server_init(void)
 {
-    log_info("%s", __FUNCTION__);
     ble_gatt_server_set_profile(trans_profile_data, sizeof(trans_profile_data));
     trans_uuid_cfg_load();
     trans_badge_cfg_load();
@@ -1090,9 +1092,6 @@ static void timer_trans_flow_test(void)
 /*************************************************************************************************/
 void bt_ble_init(void)
 {
-    log_info("%s\n", __FUNCTION__);
-    log_info("ble_file: %s", __FILE__);
-
     ble_comm_set_config_name(bt_get_local_name(), 0);
     trans_con_handle = 0;
     trans_server_init();
@@ -1146,6 +1145,7 @@ void bt_ble_exit(void)
     trans_ios_services_exit();
 #endif
 
+    trans_set_params_stop_broadcast_timer_cancel();
     ble_module_enable(0);
     ble_comm_exit();
 }
@@ -1231,6 +1231,50 @@ static int trans_adv_apply_now(void)
     }
     return 0;
 #endif
+}
+
+static int trans_broadcast_stop_now(void)
+{
+#if !CONFIG_BT_GATT_SERVER_NUM
+    return -1;
+#else
+    trans_server_adv_config.adv_auto_do = 0;
+    ble_gatt_server_set_adv_config(&trans_server_adv_config);
+    ble_gatt_server_adv_enable(0);
+    return 0;
+#endif
+}
+
+static void trans_set_params_stop_adv_timeout(void *priv)
+{
+    (void)priv;
+
+    trans_set_params_stop_adv_timer = 0;
+    (void)trans_broadcast_stop_now();
+    (void)trans_cmd_uart_send_text("{\"cmd\":\"stopBroadcast\"}\r\n");
+}
+
+int trans_broadcast_restart_now(void)
+{
+    return trans_adv_apply_now();
+}
+
+void trans_set_params_stop_broadcast_timer_restart(void)
+{
+    if (trans_set_params_stop_adv_timer) {
+        sys_timeout_del(trans_set_params_stop_adv_timer);
+        trans_set_params_stop_adv_timer = 0;
+    }
+    trans_set_params_stop_adv_timer = sys_timeout_add(NULL, trans_set_params_stop_adv_timeout,
+                                    TRANS_SET_PARAMS_BROADCAST_WINDOW_MS);
+}
+
+void trans_set_params_stop_broadcast_timer_cancel(void)
+{
+    if (trans_set_params_stop_adv_timer) {
+        sys_timeout_del(trans_set_params_stop_adv_timer);
+        trans_set_params_stop_adv_timer = 0;
+    }
 }
 
 int trans_badge_payload_set(const uint8_t *payload, uint8_t len)

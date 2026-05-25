@@ -18,14 +18,14 @@
  */
 /*-----------------------------------------------------------*/
 const char log_tag_const_v_SETUP AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_SETUP AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_SETUP AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_SETUP AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_SETUP AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_d_SETUP AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_e_SETUP AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_BOARD AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_BOARD AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_BOARD AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_BOARD AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_BOARD AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_BOARD AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_BOARD AT(.LOG_TAG_CONST) = 1;
 
@@ -54,8 +54,8 @@ const char log_tag_const_w_APP_IDLE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_APP_IDLE AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_APP AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_APP AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_APP AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_APP AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_APP AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_APP AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_APP AT(.LOG_TAG_CONST) = 1;
 
@@ -72,8 +72,8 @@ const char log_tag_const_w_USER_CFG AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_USER_CFG AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_SPP_AND_LE AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_SPP_AND_LE AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_SPP_AND_LE AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
 
@@ -83,8 +83,8 @@ const char log_tag_const_e_SPP_AND_LE AT(.LOG_TAG_CONST) = 1;
  * undefined reference to `log_tag_const_*_TRANS_CMD_UART`。
  */
 const char log_tag_const_v_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_TRANS_CMD_UART AT(.LOG_TAG_CONST) = 1;
 
@@ -157,7 +157,7 @@ const char log_tag_const_e_COMM_EDR AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_COMM_BLE AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_i_COMM_BLE AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_COMM_BLE AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_d_COMM_BLE AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_COMM_BLE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_COMM_BLE AT(.LOG_TAG_CONST) = 1;
 
@@ -193,14 +193,14 @@ const char log_tag_const_w_ELECTROCAR AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_ELECTROCAR AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_GATT_COMM AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_GATT_COMM AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_GATT_COMM AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_GATT_COMM AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_GATT_COMM AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_GATT_COMM AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_GATT_COMM AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_GATT_SERVER AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_GATT_SERVER AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_GATT_SERVER AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
 
@@ -251,5 +251,4 @@ const char log_tag_const_i_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_d_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_w_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_FINDMY AT(.LOG_TAG_CONST) = 1;
-
 

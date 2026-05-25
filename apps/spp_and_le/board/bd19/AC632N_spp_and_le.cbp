@@ -22,7 +22,7 @@
 <Add option="-Wincompatible-pointer-types" />
 <Add option="-Wundef" />
 <Add option="-fprefer-gnu-section" />
-<Add option="-Wframe-larger-than=256" />
+<Add option="-Wframe-larger-than=600" />
 <Add option="-Wreturn-type" />
 <Add option="-Wimplicit-function-declaration" />
 <Add option="-fms-extensions" />
@@ -136,7 +136,7 @@
 <Add option="--plugin-opt=save-temps" />
 <Add option="--plugin-opt=-inline-normal-into-special-section=true" />
 <Add option="--plugin-opt=-dont-used-symbol-list=malloc,free,sprintf,printf,puts,putchar" />
-<Add option="--plugin-opt=-warn-stack-size=256" />
+<Add option="--plugin-opt=-warn-stack-size=600" />
 <Add option="--sort-common" />
 <Add option="--dont-complain-call-overflow" />
 <Add option="--gc-sections" />

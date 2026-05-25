@@ -48,7 +48,6 @@ u32 adc_add_sample_ch(u32 ch)
 {
     u32 i = 0;
     for (i = 0; i < ADC_MAX_CH; i++) {
-        printf("%s() %d %x %x\n", __func__, i, ch, adc_queue[i].ch);
         if (adc_queue[i].ch == ch) {
             break;
         } else if (adc_queue[i].ch == -1) {
@@ -56,7 +55,6 @@ u32 adc_add_sample_ch(u32 ch)
             adc_queue[i].value = 1;
             adc_queue[i].jiffies = 0;
             adc_queue[i].sample_period = msecs_to_jiffies(0);
-            printf("add sample ch %x\n", ch);
             break;
         }
     }
@@ -443,7 +441,6 @@ void _adc_init(u32 sys_lvd_en)
     }
     sum_ad /= PMU_CH_VALUE_ARRAY_SIZE;
     adc_value_push(vbg_value_array, sum_ad);
-    printf("vbg_adc_value = %d\n", adc_value_avg(vbg_value_array));
 
     sum_ad = 0;
     adc_sample(AD_CH_VBAT);
@@ -452,8 +449,6 @@ void _adc_init(u32 sys_lvd_en)
     }
     sum_ad /= PMU_CH_VALUE_ARRAY_SIZE;
     adc_value_push(vbat_value_array, sum_ad);
-    printf("vbat_adc_value = %d\n", adc_value_avg(vbat_value_array));
-    printf("vbat = %d mv\n", adc_get_voltage(AD_CH_VBAT) * 4);
 
     sum_ad = 0;
     adc_sample(AD_CH_DTEMP);
@@ -462,8 +457,6 @@ void _adc_init(u32 sys_lvd_en)
     }
     sum_ad /= PMU_CH_VALUE_ARRAY_SIZE;
     dtemp_voltage = adc_value_to_voltage(adc_value_avg(vbg_value_array), sum_ad);
-    printf("dtemp_adc_value = %d\n", sum_ad);
-    printf("dtemp = %d mv\n", dtemp_voltage);
 
 
     request_irq(IRQ_SARADC_IDX, 0, adc_isr, 0);

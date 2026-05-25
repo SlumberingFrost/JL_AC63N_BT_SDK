@@ -86,7 +86,7 @@ CFLAGS := \
 	-Wincompatible-pointer-types \
 	-Wundef \
 	-fprefer-gnu-section \
-	-Wframe-larger-than=256 \
+	-Wframe-larger-than=600 \
 	-Wreturn-type \
 	-Wimplicit-function-declaration \
 	-fms-extensions \
@@ -463,7 +463,7 @@ LFLAGS := \
 	--plugin-opt=save-temps \
 	--plugin-opt=-inline-normal-into-special-section=true \
 	--plugin-opt=-dont-used-symbol-list=malloc,free,sprintf,printf,puts,putchar \
-	--plugin-opt=-warn-stack-size=256 \
+	--plugin-opt=-warn-stack-size=600 \
 	--sort-common \
 	--dont-complain-call-overflow \
 	--gc-sections \

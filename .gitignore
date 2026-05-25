@@ -57,3 +57,5 @@ cscope.out
 *.bc
 *.ufw
 *.log
+文档/Device.log
+文档/System.log

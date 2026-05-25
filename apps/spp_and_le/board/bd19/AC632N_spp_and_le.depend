@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\cpu\bd19\adc_api.c
+1779514546 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\cpu\bd19\adc_api.c
 	"typedef.h"
 	"asm/clock.h"
 	"asm/adc_api.h"
@@ -3104,7 +3104,7 @@
 	"tuya_ble_port.h"
 	"tuya_ble_mem.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\update\testbox_update.c
+1779517840 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\update\testbox_update.c
 	"update_loader_download.h"
 	"update.h"
 	"btctrler_task.h"
@@ -3148,7 +3148,7 @@
 	"system/fs/fs.h"
 	"debug.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\update\update.c
+1779514545 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\common\update\update.c
 	"update.h"
 	"update_loader_download.h"
 	"asm/crc16.h"
@@ -3172,7 +3172,7 @@
 	"system/debug.h"
 	"smartbox_extra_flash_opt.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\app_main.c
+1779514544 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\app_main.c
 	"system/includes.h"
 	"app_config.h"
 	"app_action.h"
@@ -3200,7 +3200,7 @@
 	"btcontroller_config.h"
 	"bt_common.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\lib_driver_config.c
+1779514547 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\lib_driver_config.c
 	"app_config.h"
 	"system/includes.h"
 
@@ -3232,12 +3232,12 @@
 	"app_config.h"
 	"system/includes.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\lib_update_config.c
+1779517878 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\lib_update_config.c
 	"app_config.h"
 	"system/includes.h"
 	"update_loader_download.h"
 
-1779090541 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\log_config.c
+1779514544 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\config\log_config.c
 	"system/includes.h"
 
 1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\at_char_com\app_at_char_com.c
@@ -4194,7 +4194,7 @@
 1779090182 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_uart.h
 	<stdint.h>
 
-1779177060 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.c
+1779514547 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.c
 	"system/app_core.h"
 	"system/includes.h"
 	"app_config.h"
@@ -4215,8 +4215,9 @@
 	"ble_trans.h"
 	"ble_trans_cfg.h"
 	"ble_trans_profile.h"
+	"trans_cmd_uart.h"
 
-1779173052 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.h
+1779502524 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans.h
 	<stdint.h>
 	"app_config.h"
 	"gatt_common/le_gatt_common.h"
@@ -4334,7 +4335,7 @@
 	"app_config.h"
 	"tuya_ble_internal_config.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\bt\app_comm_ble.c
+1779514547 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\bt\app_comm_ble.c
 	"system/app_core.h"
 	"system/includes.h"
 	"server/server_core.h"
@@ -4474,7 +4475,7 @@
 	"typedef.h"
 	"system/includes.h"
 
-1779177311 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\user_cfg.c
+1779514544 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\modules\user_cfg.c
 	"app_config.h"
 	"user_cfg.h"
 	"fs.h"
@@ -4488,7 +4489,7 @@
 	"audio_config.h"
 	"debug.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\version.c
+1779514545 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\version.c
 	"system/includes.h"
 	"generic/log.h"
 
@@ -4638,7 +4639,7 @@
 
 1779158213 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_proc.h
 
-1779177422 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_proc.c
+1779518028 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\trans_cmd_proc.c
 	"system/includes.h"
 	"app_config.h"
 	"ble_trans.h"
