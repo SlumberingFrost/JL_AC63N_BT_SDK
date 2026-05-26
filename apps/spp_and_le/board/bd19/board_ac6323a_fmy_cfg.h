@@ -19,6 +19,30 @@
 #define NO_CONFIG_PORT						(-1)
 
 //*********************************************************************************//
+//                            产品模式一键切换配置                                //
+//*********************************************************************************//
+// 当前先只抽象两类能力：
+// 1. 普通扫描模式：用于扫描另一台同芯片设备发出的广播
+// 2. 普通广播模式：沿用现有单广播实现
+#define TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING  0    // scan-only
+#define TCFG_AC6323A_PRODUCT_MODE_BEACON         1    // scan-only
+#define TCFG_AC6323A_PRODUCT_MODE_BADGE          2    // adv-only
+
+// 默认保持当前仓库既有行为：广播模式。
+#ifndef TCFG_AC6323A_PRODUCT_MODE
+#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_BEACON
+#endif
+
+#if (TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING) || \
+    (TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_BEACON)
+#define TCFG_AC6323A_PRODUCT_MODE_IS_SCAN       1
+#elif TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_BADGE
+#define TCFG_AC6323A_PRODUCT_MODE_IS_SCAN       0
+#else
+#error "Invalid TCFG_AC6323A_PRODUCT_MODE value."
+#endif
+
+//*********************************************************************************//
 //                                 UART配置                                        //
 //*********************************************************************************//
 #define TCFG_UART0_ENABLE					ENABLE_THIS_MOUDLE                     //串口打印模块使能

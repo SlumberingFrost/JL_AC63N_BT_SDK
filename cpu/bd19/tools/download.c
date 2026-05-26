@@ -57,6 +57,10 @@ set OBJCOPY=C:\JL\pi32\bin\llvm-objcopy.exe
 set OBJSIZEDUMP=C:\JL\pi32\bin\objsizedump.exe
 set INELF=sdk.elf
 set LZ4_PACKET=lz4_packet.exe
+set POST_ACTION=%~2
+
+if "%POST_ACTION%"=="" set POST_ACTION=%TRANS_DATA_POST_ACTION%
+if "%POST_ACTION%"=="" set POST_ACTION=auto
 
 ::@echo on
 
@@ -100,7 +104,7 @@ call download/soundbox/download.bat
 #elif defined(CONFIG_EARPHONE_CASE_ENABLE)
 call download/earphone/download.bat
 #elif defined(CONFIG_HID_CASE_ENABLE) ||defined(CONFIG_SPP_AND_LE_CASE_ENABLE)||defined(CONFIG_MESH_CASE_ENABLE)||defined(CONFIG_DONGLE_CASE_ENABLE)    //数传
-call download/data_trans/download.bat
+call download/data_trans/download.bat %POST_ACTION%
 #else
 //to do other case
 #endif  //endif app_case

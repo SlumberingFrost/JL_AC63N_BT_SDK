@@ -46,6 +46,8 @@
 #define log_info_hexdump(...)
 #endif
 
+#define trans_boot_trace(fmt, ...) printf("[SCAN-BOOT] " fmt "\r\n", ##__VA_ARGS__)
+
 #if CONFIG_APP_SPP_LE
 #ifndef CONFIG_APP_LE_TRANS
 #define CONFIG_APP_LE_TRANS CONFIG_APP_SPP_LE
@@ -125,11 +127,13 @@ static const char user_tag_string[] = {EIR_TAG_STRING};
 
 static const u8 trans_PNP_ID[] = {PNP_VID_SOURCE, PNP_VID & 0xFF, PNP_VID >> 8, PNP_PID & 0xFF, PNP_PID >> 8, PNP_PID_VERSION & 0xFF, PNP_PID_VERSION >> 8};
 
-static u8  trans_adv_data[ADV_RSP_PACKET_MAX];//max is 31
-static u8  trans_scan_rsp_data[ADV_RSP_PACKET_MAX];//max is 31
 static u8  trans_test_read_write_buf[4];
 static u16 trans_con_handle;
+#if CONFIG_BT_GATT_SERVER_NUM
+static u8  trans_adv_data[ADV_RSP_PACKET_MAX];//max is 31
+static u8  trans_scan_rsp_data[ADV_RSP_PACKET_MAX];//max is 31
 static adv_cfg_t trans_server_adv_config;
+#endif
 static int trans_set_params_stop_adv_timer;
 
 #define TRANS_IBEACON_CFG_VALID 0xA5
@@ -771,6 +775,7 @@ static int trans_adv_eir_append_data(uint8_t *buf, uint16_t *offset, uint8_t dat
  *  \note
  */
 /*************************************************************************************************/
+#if CONFIG_BT_GATT_SERVER_NUM
 static int trans_make_set_adv_data(void)
 {
     uint16_t offset = 0;
@@ -783,7 +788,7 @@ static int trans_make_set_adv_data(void)
     if (trans_adv_eir_append_val(buf, &offset, HCI_EIR_DATATYPE_FLAGS,
                                  FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_LE_AND_EDR_SAME_CONTROLLER, 1)) {
         return -1;
-    }
+
 #else
     if (trans_adv_eir_append_val(buf, &offset, HCI_EIR_DATATYPE_FLAGS,
                                  FLAGS_GENERAL_DISCOVERABLE_MODE | FLAGS_EDR_NOT_SUPPORTED, 1)) {
@@ -947,6 +952,7 @@ void trans_server_init(void)
     trans_badge_cfg_load();
     (void)trans_adv_config_set();
 }
+#endif
 
 /*************************************************************************************************/
 /*!
@@ -982,8 +988,10 @@ void trans_disconnect(void)
 
 void bt_ble_before_start_init(void)
 {
+    trans_boot_trace("bt_ble_before_start_init: enter");
     log_info("%s", __FUNCTION__);
     ble_comm_init(&trans_gatt_control_block);
+    trans_boot_trace("bt_ble_before_start_init: ble_comm_init done");
 }
 
 
@@ -1092,16 +1100,29 @@ static void timer_trans_flow_test(void)
 /*************************************************************************************************/
 void bt_ble_init(void)
 {
+    trans_boot_trace("bt_ble_init: enter");
     ble_comm_set_config_name(bt_get_local_name(), 0);
     trans_con_handle = 0;
+
+#if CONFIG_BT_GATT_SERVER_NUM
+    trans_boot_trace("bt_ble_init: trans_server_init begin");
     trans_server_init();
+    trans_boot_trace("bt_ble_init: trans_server_init done");
+#endif
 
 #if CONFIG_BT_GATT_CLIENT_NUM
+    trans_boot_trace("bt_ble_init: trans_scan_filter_cfg_load begin");
+    trans_scan_filter_cfg_load();
+    trans_boot_trace("bt_ble_init: trans_scan_filter_cfg_load done");
+    trans_boot_trace("bt_ble_init: trans_client_init begin");
     trans_client_init();
+    trans_boot_trace("bt_ble_init: trans_client_init done");
 #endif
 
 #if CONFIG_BT_GATT_CLIENT_NUM && CONFIG_BT_SM_SUPPORT_ENABLE
+    trans_boot_trace("bt_ble_init: trans_ios_services_init begin");
     trans_ios_services_init();
+    trans_boot_trace("bt_ble_init: trans_ios_services_init done");
 #endif
 
 #if ATT_DATA_RECIEVT_FLOW
@@ -1110,7 +1131,16 @@ void bt_ble_init(void)
 //    sys_timer_add(0, timer_trans_flow_test, 5000);
 #endif
 
+    trans_boot_trace("bt_ble_init: ble_module_enable(1) begin");
     ble_module_enable(1);
+    trans_boot_trace("bt_ble_init: ble_module_enable(1) done");
+
+#if CONFIG_BT_GATT_CLIENT_NUM && TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+    trans_boot_trace("bt_ble_init: ble_gatt_client_scan_enable(1) begin");
+    ble_gatt_client_scan_enable(1);
+    trans_boot_trace("bt_ble_init: ble_gatt_client_scan_enable(1) done");
+    log_info("scan-only: force scan enable");
+#endif
 
 #if TEST_TRANS_CHANNEL_DATA
     if (TEST_TRANS_TIMER_MS < 10) {
@@ -1491,9 +1521,55 @@ uint8_t trans_uuid_is_locked(void)
     return 0;
 }
 
+int trans_scan_filter_get(uint16_t *school_id, uint16_t *device_id, uint8_t *enable)
+{
+#if !CONFIG_BT_GATT_CLIENT_NUM
+    (void)school_id;
+    (void)device_id;
+    (void)enable;
+    return -2;
+#else
+    if (school_id) {
+        *school_id = trans_scan_filter_cfg.school_id;
+    }
+    if (device_id) {
+        *device_id = trans_scan_filter_cfg.device_id;
+    }
+    if (enable) {
+        *enable = trans_scan_filter_cfg.enable ? 1 : 0;
+    }
+    return 0;
+#endif
+}
+
+int trans_scan_filter_set(uint16_t school_id, uint16_t device_id, uint8_t enable)
+{
+#if !CONFIG_BT_GATT_CLIENT_NUM
+    (void)school_id;
+    (void)device_id;
+    (void)enable;
+    return -2;
+#else
+    if (enable > 1) {
+        return -1;
+    }
+    trans_scan_filter_cfg.school_id = school_id;
+    trans_scan_filter_cfg.device_id = device_id;
+    trans_scan_filter_cfg.enable = enable;
+    if (trans_scan_filter_cfg_save()) {
+        return -3;
+    }
+    return 0;
+#endif
+}
+
 uint8_t trans_uuid_is_ready(void)
 {
+#if CONFIG_BT_GATT_SERVER_NUM
     return trans_uuid_ready;
+#else
+    return 0;
+#endif
 }
 
 /*************************************************************************************************/

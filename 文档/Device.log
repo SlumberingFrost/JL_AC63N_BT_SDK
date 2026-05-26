@@ -1,0 +1,367 @@
+
+[11:34:09.569]IN←◆
+[00:00:00.100]get_chip_id:   ffff
+[00:00:00.103]get_vbat_trim: 6
+[00:00:00.106]get_vbg_trim:  14
+[00:00:00.110][0-MSYS]--Reset Source : 0x1
+[00:00:00.114]P11 SYS RESET
+[00:00:00.116][1-P11]--Reset Source : 0x4
+[00:00:00.116]P33 SYS RESET
+[00:00:00.124][2-P33]--Reset Source : 0x2
+[00:00:00.128]VDDIO LVD
+[00:00:00.132][Info]: [SDFILE]VM size: 0x1d000 @ 0x21000
+
+FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF FF FF FF FF FF FF FF FF 
+[00:00:00.142][Info]: [SDFILE]disk capacity 512 KB
+[00:00:00.147]last file_addr:1f6c6 1020
+[00:00:00.151]end_addr:21000
+
+49 53 44 55 04 02 59 FF 3D 17 42 F1 7B B3 FF FF 
+[00:00:00.159][Debug]: [SDFILE]sdfile mount succ
+[00:00:00.183]trim: 0, wvdd_lev: 4
+[00:00:00.186]trim: 0, pvdd_lev: 10, pvdd_lev_l: 4
+
+[11:34:09.728]IN←◆[00:00:00.249][Info]: [USER_CFG]bt name config:AC6323A
+
+[00:00:00.263]=================update_param_len:900
+[00:00:00.270][Info]: [COMM_BLE]ble mac:
+
+9A 2E 95 BB EB 69 
+[00:00:00.276][SCAN-BOOT] bt_ble_before_start_init: enter
+[00:00:00.282][BLE_TRANS]bt_ble_before_start_init 
+[00:00:00.287][Info]: [GATT_CLIENT]ble_gatt_client_init
+
+[00:00:00.293][SCAN-BOOT] bt_ble_before_start_init: ble_comm_init done
+[00:00:00.300]le_support:2 1
+[00:00:00.303]le_config:1 0 1 0
+
+[11:34:09.839]IN←◆[00:00:00.359][Debug]: [LBUF]lbuf misalgin : 0x210664 / 0x826
+[00:00:00.366][Info]: [GATT_CLIENT]ble_gatt_client_profile_init
+
+[00:00:00.373]att_send need_size >= 6+1+188
+[00:00:00.379][SCAN-BOOT] bt_ble_init: enter
+[00:00:00.383][SCAN-BOOT] bt_ble_init: trans_scan_filter_cfg_load begin
+[00:00:00.390][SCAN-BOOT] bt_ble_init: trans_scan_filter_cfg_load done
+[00:00:00.397][SCAN-BOOT] bt_ble_init: trans_client_init begin
+[00:00:00.404][SCAN-BOOT] trans_client_init: enter
+[00:00:00.409][TRANS-SEARCH]trans_client_init 
+[00:00:00.413][SCAN-BOOT] trans_client_init: set_scan_config begin
+[00:00:00.420][SCAN-BOOT] trans_client_init: set_scan_config done
+[00:00:00.426][SCAN-BOOT] trans_client_init: set_search_config begin
+[00:00:00.433][SCAN-BOOT] trans_client_init: set_search_config done
+[00:00:00.440][TRANS-SEARCH]scan-only skeleton enabled 
+[00:00:00.445][SCAN-BOOT] trans_client_init: exit
+[00:00:00.451][SCAN-BOOT] bt_ble_init: trans_client_init done
+[00:00:00.457][SCAN-BOOT] bt_ble_init: ble_module_enable(1) begin
+[00:00:00.463][Info]: [GATT_CLIENT]mode_en:1
+
+[00:00:00.468][Info]: [GATT_CLIENT]__gatt_client_just_new_dev_scan
+
+[00:00:00.475][Info]: [GATT_CLIENT]new_dev_scan
+
+[00:00:00.480][Info]: [GATT_CLIENT]client_work_st:1->40
+
+[00:00:00.485][TRANS-SEARCH]client_state: handle=00,40
+ 
+[00:00:00.491][Info]: [GATT_CLIENT]scan_param: 1-38-12
+
+[00:00:00.498][Info]: [GATT_CLIENT]scan_en:1
+
+[00:00:00.503][SCAN-BOOT] bt_ble_init: ble_module_enable(1) done
+[00:00:00.513][SCAN-BOOT] bt_ble_init: ble_gatt_client_scan_enable(1) begin
+[00:00:00.520][Info]: [GATT_CLIENT]__gatt_client_just_new_dev_scan
+
+[00:00:00.527][Info]: [GATT_CLIENT]dev_doing,40
+
+[00:00:00.532][SCAN-BOOT] bt_ble_init: ble_gatt_client_scan_enable(1) done
+[00:00:00.539][BLE_TRANS]scan-only: force scan enable 
+[11:34:11.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:12.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:13.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:14.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:15.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:16.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:17.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:18.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:19.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:20.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:21.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:22.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:23.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:24.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:25.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:26.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:27.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:28.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:29.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:29.996]OUT→◇CMD:SCAN:FILTER?
+□
+[11:34:30.005]IN←◆{"cmd":"getResult","retCode":0,"schoolId":1,"deviceId":8888,"enable":1}
+
+[11:34:30.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:31.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:32.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:33.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:34.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:35.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:36.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:37.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:38.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:39.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:40.933]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:41.929]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:42.933]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:43.932]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:44.933]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:45.933]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:46.932]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:47.932]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:48.933]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5242}]}
+
+[11:34:50.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:50.940]OUT→◇CMD:MODE?□
+[11:34:51.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:52.220]OUT→◇CMD:MODE?□
+[11:34:52.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:53.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:54.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:55.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:56.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:57.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:58.391]OUT→◇CMD:MODE?/r/n□
+[11:34:58.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:34:59.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:00.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:01.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:02.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:03.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:04.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:05.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:06.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:07.451]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":1}
+□
+[11:35:07.462]IN←◆{"cmd":"setParamsResult","retCode":1,"code":"UUID_UNSET"}
+
+[11:35:07.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:08.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:09.929]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:10.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:11.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:12.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:13.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:14.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:15.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:16.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:17.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:18.931]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:19.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:20.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:21.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:22.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:23.365]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":1}
+□
+[11:35:23.376]IN←◆{"cmd":"setParamsResult","retCode":1,"code":"UUID_UNSET"}
+
+[11:35:23.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:24.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:25.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:26.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:27.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:28.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:29.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:30.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:31.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:32.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:33.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:34.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:35.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:36.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:37.929]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:38.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:39.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:40.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:41.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:42.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:43.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:44.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:45.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:46.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:47.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:48.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:49.934]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:50.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:51.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:52.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:53.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:54.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:55.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:56.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:57.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:58.455]OUT→◇CMD:SCAN:DEVICEID=8888
+□
+[11:35:58.465]IN←◆{"cmd":"setResult","retCode":0,"schoolId":1,"deviceId":8888,"enable":1}
+
+[11:35:58.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:35:59.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:00.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:01.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:02.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:03.122]OUT→◇CMD:SCAN:DEVICEID=888
+□
+[11:36:03.132]IN←◆{"cmd":"setResult","retCode":0,"schoolId":1,"deviceId":888,"enable":1}
+
+[11:36:03.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:04.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:05.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:06.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:07.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:08.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:09.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:10.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:11.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:12.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:13.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:14.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:15.931]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:16.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:17.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:18.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:19.933]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:20.939]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:21.932]IN←◆{"cmd":"scanResult","data":[]}
+
+[11:36:21.960]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":1}
+□
+[11:36:21.972]IN←◆{"cmd":"setParamsResult","retCode":1,"code":"UUID_UNSET"}
+
+[11:36:22.933]IN←◆{"cmd":"scanResult","data":[]}

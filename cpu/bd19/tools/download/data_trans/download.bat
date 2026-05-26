@@ -2,13 +2,17 @@
 
 cd %~dp0
 
+set POST_ACTION=%~1
 set KEY_FILE=..\..\..\..\..\apps\spp_and_le\board\bd19\012AC690X-8029.key
 set KEY_MODE=%TRANS_DATA_KEY_MODE%
 set DOWNLOAD_WAIT_MS=%TRANS_DATA_DOWNLOAD_WAIT_MS%
 set DOWNLOAD_RETRY_COUNT=%TRANS_DATA_DOWNLOAD_RETRY_COUNT%
 set DOWNLOAD_RETRY_DELAY_SEC=%TRANS_DATA_DOWNLOAD_RETRY_DELAY_SEC%
 set DOWNLOAD_RET=0
+set DOWNLOAD_SKIP_RET=200
 
+if "%POST_ACTION%"=="" set POST_ACTION=%TRANS_DATA_POST_ACTION%
+if "%POST_ACTION%"=="" set POST_ACTION=auto
 if "%KEY_MODE%"=="" set KEY_MODE=AUTO
 if "%DOWNLOAD_WAIT_MS%"=="" set DOWNLOAD_WAIT_MS=2000
 if "%DOWNLOAD_RETRY_COUNT%"=="" set DOWNLOAD_RETRY_COUNT=12
@@ -20,6 +24,32 @@ copy ..\..\app.bin .
 copy ..\..\bd19loader.bin .
 copy ..\..\p11_code.bin .
 copy ..\..\script.ver .
+
+if /I "%POST_ACTION%"=="build" (
+    echo INFO: post action=build, package only, skip download
+    goto after_download
+)
+
+if /I "%POST_ACTION%"=="pack" (
+    echo INFO: post action=pack, package only, skip download
+    goto after_download
+)
+
+if /I "%POST_ACTION%"=="auto" (
+    echo INFO: post action=auto, detect download mode before download
+    call :run_auto_download
+    set DOWNLOAD_RET=%ERRORLEVEL%
+    if "%DOWNLOAD_RET%"=="%DOWNLOAD_SKIP_RET%" (
+        echo INFO: no device in download mode, keep build-only result
+        set DOWNLOAD_RET=0
+    )
+    goto after_download
+)
+
+if /I not "%POST_ACTION%"=="download" (
+    echo WARN: unknown post action "%POST_ACTION%", fallback to build-only
+    goto after_download
+)
 
 if /I "%KEY_MODE%"=="OFF" (
     echo INFO: download without KEY
@@ -94,6 +124,46 @@ rem keep a short delay for downloader teardown; no temp file is created here.
 ping /n 2 127.1>nul
 exit /b %DOWNLOAD_RET%
 
+:run_auto_download
+if /I "%KEY_MODE%"=="OFF" (
+    echo INFO: auto detect download mode without KEY
+    call :probe_download_mode
+    exit /b %ERRORLEVEL%
+)
+
+if /I "%KEY_MODE%"=="ON" (
+    if not exist "%KEY_FILE%" (
+        echo ERROR: KEY file not found: %KEY_FILE%
+        exit /b 1
+    )
+    echo INFO: auto detect download mode with KEY file: %KEY_FILE%
+    call :probe_download_mode -key "%KEY_FILE%"
+    exit /b %ERRORLEVEL%
+)
+
+if not exist "%KEY_FILE%" (
+    echo WARN: KEY file not found, auto detect without KEY
+    call :probe_download_mode
+    exit /b %ERRORLEVEL%
+)
+
+echo INFO: auto detect KEY download mode
+call :probe_download_mode -key "%KEY_FILE%"
+set DOWNLOAD_RET=%ERRORLEVEL%
+if "%DOWNLOAD_RET%"=="0" exit /b 0
+if "%DOWNLOAD_RET%"=="%DOWNLOAD_SKIP_RET%" exit /b %DOWNLOAD_SKIP_RET%
+
+echo WARN: KEY auto-detect failed, retry probe without KEY
+call :probe_download_mode
+exit /b %ERRORLEVEL%
+
+:probe_download_mode
+call :run_download_capture %*
+set DOWNLOAD_RET=%ERRORLEVEL%
+if "%DOWNLOAD_RET%"=="0" exit /b 0
+if "%DOWNLOAD_RET%"=="%DOWNLOAD_SKIP_RET%" exit /b %DOWNLOAD_SKIP_RET%
+exit /b %DOWNLOAD_RET%
+
 :run_download_with_retry
 setlocal enabledelayedexpansion
 set RETRY_RET=0
@@ -114,6 +184,27 @@ if !RETRY_INDEX! GEQ %DOWNLOAD_RETRY_COUNT% (
 echo WARN: download attempt !RETRY_INDEX! failed, retry after %DOWNLOAD_RETRY_DELAY_SEC%s
 ping /n !RETRY_PING_COUNT! 127.1>nul
 goto retry_loop
+
+:run_download_capture
+setlocal enabledelayedexpansion
+set "DL_LOG=%TEMP%\trans_data_download_%RANDOM%_%RANDOM%.log"
+if "%~1"=="" (
+    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait %DOWNLOAD_WAIT_MS% -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress >"!DL_LOG!" 2>&1
+) else (
+    ..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev bd19 -boot 0x2000 -div8 -wait %DOWNLOAD_WAIT_MS% -uboot ..\..\uboot.boot -app ..\..\app.bin ..\..\cfg_tool.bin -res ..\..\p11_code.bin -uboot_compress %* >"!DL_LOG!" 2>&1
+)
+set DL_RET=!ERRORLEVEL!
+if exist "!DL_LOG!" type "!DL_LOG!"
+findstr /I /C:"Device offline" /C:"only package the file" "!DL_LOG!" >nul 2>nul
+set DL_SKIP=!ERRORLEVEL!
+if exist "!DL_LOG!" del "!DL_LOG!" >nul 2>nul
+if "!DL_RET!"=="0" (
+    endlocal & exit /b 0
+)
+if "!DL_SKIP!"=="0" (
+    endlocal & exit /b %DOWNLOAD_SKIP_RET%
+)
+endlocal & exit /b !DL_RET!
 
 :run_download
 if "%~1"=="" (

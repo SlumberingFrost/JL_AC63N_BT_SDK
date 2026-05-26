@@ -1304,7 +1304,6 @@ static void __gatt_client_report_adv_data(adv_report_t *report_pt, u16 len)
 
     if (!__this->gatt_search_config || !__this->gatt_search_config->match_devices_count) {
         /*没有加指定搜索,直接输出adv report*/
-        putchar('~');
         __gatt_client_event_callback_handler(GATT_COMM_EVENT_SCAN_ADV_REPORT, report_pt, len, 0);
         return;
     }
@@ -1494,7 +1493,6 @@ void ble_gatt_client_cbk_packet_handler(uint8_t packet_type, uint16_t channel, u
 
         case GAP_EVENT_ADVERTISING_REPORT:
             if (BLE_ST_SCAN == ble_gatt_client_get_work_state()) {
-                putchar('V');
                 __gatt_client_report_adv_data((void *)&packet[2], packet[1]);
             } else {
                 log_info("drop scan_report!!!\n");
@@ -1537,7 +1535,6 @@ void ble_gatt_client_cbk_packet_handler(uint8_t packet_type, uint16_t channel, u
 #if EXT_ADV_MODE_EN || PERIODIC_ADV_MODE_EN
             case HCI_SUBEVENT_LE_EXTENDED_ADVERTISING_REPORT:
                 if (BLE_ST_SCAN == ble_gatt_client_get_work_state()) {
-                    putchar('v');
                     __gatt_client_report_adv_data(&packet[2], packet[1]);
                 } else {
                     log_info("drop ext_adv_report!!!\n");
@@ -1933,5 +1930,4 @@ void ble_gatt_client_exit(void)
 }
 
 #endif
-
 

@@ -87,7 +87,7 @@
 
 1733732446 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\include_lib\system\generic\jiffies.h
 
-1733732446 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\include\app_config.h
+1779679168 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\include\app_config.h
 	"board_config.h"
 	"usb_common_def.h"
 	"btcontroller_mode.h"
@@ -154,7 +154,7 @@
 
 1733732446 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6329f_demo_global_build_cfg.h
 
-1779096092 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6323a_fmy_cfg.h
+1779679168 d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\board\bd19\board_ac6323a_fmy_cfg.h
 	"board_ac6323a_fmy_global_build_cfg.h"
 	"usb_std_class_def.h"
 
@@ -4257,7 +4257,7 @@
 	"le_client_demo.h"
 	"gatt_common/le_gatt_common.h"
 
-1733732446 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans_search.c
+1779679168 source:d:\rd\ac63n_bt\fw-ac63_bt_sdk-master\apps\spp_and_le\examples\trans_data\ble_trans_search.c
 	"system/app_core.h"
 	"system/includes.h"
 	"app_config.h"

@@ -59,6 +59,8 @@ int trans_uuid_info_set(const uint8_t *uuid, uint16_t major, uint16_t minor, int
 int trans_uuid_lock_set(uint8_t lock);
 uint8_t trans_uuid_is_ready(void);
 uint8_t trans_uuid_is_locked(void);
+int trans_scan_filter_get(uint16_t *school_id, uint16_t *device_id, uint8_t *enable);
+int trans_scan_filter_set(uint16_t school_id, uint16_t device_id, uint8_t enable);
 int trans_broadcast_restart_now(void);
 void trans_set_params_stop_broadcast_timer_restart(void);
 void trans_set_params_stop_broadcast_timer_cancel(void);

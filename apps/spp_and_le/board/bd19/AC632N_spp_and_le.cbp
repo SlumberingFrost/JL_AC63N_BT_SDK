@@ -172,7 +172,7 @@
 <Add before="..\..\..\..\tools\utils\fixbat.exe ..\..\..\..\cpu\bd19\tools\download.bat" />
 <Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\cpu\bd19\tools\isd_config_rule.c -o ..\..\..\..\cpu\bd19\tools\isd_config.ini" />
 <Mode before="always" />
-<Add after="..\..\..\..\cpu\bd19\tools\download.bat sdk" />
+<Add after="..\..\..\..\cpu\bd19\tools\download.bat sdk auto" />
 <Mode after="always" />
 </ExtraCommands>
 </Target>

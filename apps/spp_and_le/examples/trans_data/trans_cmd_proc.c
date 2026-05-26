@@ -466,6 +466,64 @@ static int trans_cmd_json_send_set_params_result(uint8_t ret_code, const char *c
     return trans_cmd_send_literal("}\r\n");
 }
 
+static int trans_cmd_json_send_scan_filter_result(const char *cmd, uint8_t ret_code, const char *code,
+                                                  uint16_t school_id, uint16_t device_id, uint8_t enable, uint8_t with_cfg)
+{
+    const char *op = "result";
+
+    if (cmd) {
+        if (strstr(cmd, "Get")) {
+            op = "getResult";
+        } else if (strstr(cmd, "Set")) {
+            op = "setResult";
+        }
+    }
+
+    if (trans_cmd_send_literal("{\"cmd\":\"")) {
+        return -1;
+    }
+    if (trans_cmd_send_literal(op)) {
+        return -1;
+    }
+    if (trans_cmd_send_literal("\",\"retCode\":")) {
+        return -1;
+    }
+    if (trans_cmd_send_dec_u16(ret_code)) {
+        return -1;
+    }
+    if (with_cfg) {
+        if (trans_cmd_send_literal(",\"schoolId\":")) {
+            return -1;
+        }
+        if (trans_cmd_send_dec_u16(school_id)) {
+            return -1;
+        }
+        if (trans_cmd_send_literal(",\"deviceId\":")) {
+            return -1;
+        }
+        if (trans_cmd_send_dec_u16(device_id)) {
+            return -1;
+        }
+        if (trans_cmd_send_literal(",\"enable\":")) {
+            return -1;
+        }
+        if (trans_cmd_send_dec_u16(enable ? 1 : 0)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("}\r\n");
+    }
+    if (code && code[0]) {
+        if (trans_cmd_send_literal(",\"code\":\"")) {
+            return -1;
+        }
+        if (trans_cmd_send_literal(code)) {
+            return -1;
+        }
+        return trans_cmd_send_literal("\"}\r\n");
+    }
+    return trans_cmd_send_literal("}\r\n");
+}
+
 static int trans_cmd_parse_lock_value(const char *text, uint8_t *lock_val)
 {
     uint16_t tmp = 0;
@@ -474,6 +532,158 @@ static int trans_cmd_parse_lock_value(const char *text, uint8_t *lock_val)
         return -1;
     }
     *lock_val = (uint8_t)tmp;
+    return 0;
+}
+
+static void trans_cmd_trim_ascii_blank(char *text)
+{
+    char *start;
+    int len;
+
+    if (!text) {
+        return;
+    }
+    start = text;
+    while (*start == ' ' || *start == '\t') {
+        start++;
+    }
+    if (start != text) {
+        memmove(text, start, strlen(start) + 1);
+    }
+
+    len = (int)strlen(text);
+    while (len > 0 && (text[len - 1] == ' ' || text[len - 1] == '\t')) {
+        text[--len] = '\0';
+    }
+}
+
+static uint8_t trans_cmd_str_ieq(const char *lhs, const char *rhs)
+{
+    if (!lhs || !rhs) {
+        return 0;
+    }
+    while (*lhs && *rhs) {
+        if (trans_cmd_ascii_upper(*lhs) != trans_cmd_ascii_upper(*rhs)) {
+            return 0;
+        }
+        lhs++;
+        rhs++;
+    }
+    return (*lhs == '\0' && *rhs == '\0') ? 1 : 0;
+}
+
+static int trans_cmd_parse_scan_filter_enable(const char *text, uint8_t *enable)
+{
+    if (!text || !enable) {
+        return -1;
+    }
+    if (!strcmp(text, "1") || trans_cmd_str_ieq(text, "ON")) {
+        *enable = 1;
+        return 0;
+    }
+    if (!strcmp(text, "0") || trans_cmd_str_ieq(text, "OFF")) {
+        *enable = 0;
+        return 0;
+    }
+    return -1;
+}
+
+static int trans_cmd_parse_scan_filter_tail(const char *tail,
+                                            uint16_t cur_school_id,
+                                            uint16_t cur_device_id,
+                                            uint8_t cur_enable,
+                                            uint16_t *out_school_id,
+                                            uint16_t *out_device_id,
+                                            uint8_t *out_enable)
+{
+    char kv_buf[80];
+    uint16_t school_id = cur_school_id;
+    uint16_t device_id = cur_device_id;
+    uint8_t enable = cur_enable;
+    uint8_t has_school = 0;
+    uint8_t has_device = 0;
+    uint8_t has_enable = 0;
+    int tail_len;
+    char *token;
+
+    if (!tail || !out_school_id || !out_device_id || !out_enable) {
+        return -1;
+    }
+    if (!trans_cmd_parse_scan_filter_enable(tail, &enable)) {
+        *out_school_id = school_id;
+        *out_device_id = device_id;
+        *out_enable = enable;
+        return 0;
+    }
+
+    tail_len = (int)strlen(tail);
+    if (tail_len <= 0 || tail_len >= (int)sizeof(kv_buf)) {
+        return -1;
+    }
+    memcpy(kv_buf, tail, tail_len + 1);
+
+    token = kv_buf;
+    while (token && *token) {
+        char *next = strchr(token, ',');
+        char *eq;
+        char *key;
+        char *val;
+        uint16_t parsed_u16 = 0;
+        uint8_t parsed_enable = 0;
+
+        if (next) {
+            *next = '\0';
+            next++;
+        }
+        trans_cmd_trim_ascii_blank(token);
+        if (token[0] == '\0') {
+            return -1;
+        }
+
+        eq = strchr(token, '=');
+        if (!eq) {
+            return -1;
+        }
+        *eq = '\0';
+        key = token;
+        val = eq + 1;
+        trans_cmd_trim_ascii_blank(key);
+        trans_cmd_trim_ascii_blank(val);
+        if (key[0] == '\0' || val[0] == '\0') {
+            return -1;
+        }
+
+        if (trans_cmd_str_ieq(key, "SCHOOLID") || trans_cmd_str_ieq(key, "SCHOOL_ID")) {
+            if (has_school || trans_cmd_parse_u16_auto(val, &parsed_u16)) {
+                return -1;
+            }
+            school_id = parsed_u16;
+            has_school = 1;
+        } else if (trans_cmd_str_ieq(key, "DEVICEID") || trans_cmd_str_ieq(key, "DEVICE_ID")) {
+            if (has_device || trans_cmd_parse_u16_auto(val, &parsed_u16)) {
+                return -1;
+            }
+            device_id = parsed_u16;
+            has_device = 1;
+        } else if (trans_cmd_str_ieq(key, "ENABLE")) {
+            if (has_enable || trans_cmd_parse_scan_filter_enable(val, &parsed_enable)) {
+                return -1;
+            }
+            enable = parsed_enable;
+            has_enable = 1;
+        } else {
+            return -1;
+        }
+
+        token = next;
+    }
+
+    if (!has_school && !has_device && !has_enable) {
+        return -1;
+    }
+    *out_school_id = school_id;
+    *out_device_id = device_id;
+    *out_enable = enable;
     return 0;
 }
 
@@ -862,6 +1072,119 @@ static int trans_cmd_handle_badge_lock_set(const char *value_text)
     return trans_cmd_uart_send_text("ERR:BADGE_PARAM\r\n");
 }
 
+static int trans_cmd_handle_scan_filter_query(void)
+{
+    uint16_t school_id = 0;
+    uint16_t device_id = 0;
+    uint8_t enable = 0;
+    int ret;
+
+    ret = trans_scan_filter_get(&school_id, &device_id, &enable);
+    if (ret == 0) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterGet", 0, NULL, school_id, device_id, enable, 1);
+    }
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterGet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    return trans_cmd_json_send_scan_filter_result("scanFilterGet", 1, "SCAN_FILTER_GET", 0, 0, 0, 0);
+}
+
+static int trans_cmd_handle_scan_school_id_set(const char *value_text)
+{
+    uint16_t school_id = 0;
+    uint16_t device_id = 0;
+    uint8_t enable = 0;
+    int ret;
+
+    if (trans_cmd_parse_u16_auto(value_text, &school_id)) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+    }
+
+    ret = trans_scan_filter_get(NULL, &device_id, &enable);
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_FILTER_GET", 0, 0, 0, 0);
+    }
+
+    ret = trans_scan_filter_set(school_id, device_id, enable);
+    if (ret == 0) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 0, NULL, school_id, device_id, enable, 1);
+    }
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret == -3) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SAVE_FAIL", 0, 0, 0, 0);
+    }
+    return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+}
+
+static int trans_cmd_handle_scan_device_id_set(const char *value_text)
+{
+    uint16_t school_id = 0;
+    uint16_t device_id = 0;
+    uint8_t enable = 0;
+    int ret;
+
+    if (trans_cmd_parse_u16_auto(value_text, &device_id)) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+    }
+
+    ret = trans_scan_filter_get(&school_id, NULL, &enable);
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_FILTER_GET", 0, 0, 0, 0);
+    }
+
+    ret = trans_scan_filter_set(school_id, device_id, enable);
+    if (ret == 0) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 0, NULL, school_id, device_id, enable, 1);
+    }
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret == -3) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SAVE_FAIL", 0, 0, 0, 0);
+    }
+    return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+}
+
+static int trans_cmd_handle_scan_filter_set(const char *value_text)
+{
+    uint16_t school_id = 0;
+    uint16_t device_id = 0;
+    uint8_t enable = 0;
+    int ret;
+
+    ret = trans_scan_filter_get(&school_id, &device_id, &enable);
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_FILTER_GET", 0, 0, 0, 0);
+    }
+    if (trans_cmd_parse_scan_filter_tail(value_text, school_id, device_id, enable,
+                                         &school_id, &device_id, &enable)) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+    }
+
+    ret = trans_scan_filter_set(school_id, device_id, enable);
+    if (ret == 0) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 0, NULL, school_id, device_id, enable, 1);
+    }
+    if (ret == -2) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SCAN_NOT_SUPPORTED", 0, 0, 0, 0);
+    }
+    if (ret == -3) {
+        return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "SAVE_FAIL", 0, 0, 0, 0);
+    }
+    return trans_cmd_json_send_scan_filter_result("scanFilterSet", 1, "PARAM", 0, 0, 0, 0);
+}
+
 static int trans_cmd_handle_school_id_set(const char *value_text)
 {
     uint8_t uuid[16];
@@ -933,6 +1256,7 @@ static int trans_cmd_handle_device_id_set(const char *value_text)
 static int trans_cmd_handle_json_set_params(const char *line)
 {
     trans_cmd_set_params_t cfg;
+#if !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
     uint8_t uuid[16];
     uint16_t major = 0;
     uint16_t minor = 0;
@@ -940,6 +1264,7 @@ static int trans_cmd_handle_json_set_params(const char *line)
     uint16_t device_id = 0;
     int8_t tx_power = (int8_t)-59;
     uint8_t ready = 0;
+#endif
     int ret;
 
     ret = trans_cmd_json_parse_set_params(line, &cfg);
@@ -950,6 +1275,21 @@ static int trans_cmd_handle_json_set_params(const char *line)
         return trans_cmd_json_send_set_params_result(1, "PARAM", 0, 0, 0);
     }
 
+#if TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+    /*
+     * 扫描模式下，setParams 复用为过滤条件写入口：
+     * 主控下发 schoolId/deviceId 后，直接更新 scanFilter，
+     * 与 AW31N 当前“主扫改过滤”的联调口径保持一致。
+     */
+    ret = trans_scan_filter_set(cfg.school_id, cfg.device_id, 1);
+    if (ret == -2) {
+        return trans_cmd_json_send_set_params_result(1, "SCAN_NOT_SUPPORTED", 0, 0, 0);
+    }
+    if (ret) {
+        return trans_cmd_json_send_set_params_result(1, "SAVE_FAIL", 0, 0, 0);
+    }
+    return trans_cmd_json_send_set_params_result(0, NULL, cfg.school_id, cfg.device_id, 1);
+#else
     ret = trans_uuid_info_get(uuid, &major, &minor, &tx_power, NULL, NULL, &school_id, &device_id, NULL, &ready);
     if (ret || !ready) {
         return trans_cmd_json_send_set_params_result(1, "UUID_UNSET", 0, 0, 0);
@@ -978,6 +1318,7 @@ static int trans_cmd_handle_json_set_params(const char *line)
     ret = trans_cmd_json_send_set_params_result(0, NULL, cfg.school_id, cfg.device_id, 1);
     trans_set_params_stop_broadcast_timer_restart();
     return ret;
+#endif
 }
 
 static int trans_cmd_proc_handle_line(const uint8_t *line, uint16_t len)
@@ -1021,6 +1362,20 @@ static int trans_cmd_proc_handle_line(const uint8_t *line, uint16_t len)
     if (!strncmp(text, "CMD:BADGE:LOCK=", 15)) {
         return trans_cmd_handle_badge_lock_set(text + 15);
     }
+    if (!strcmp(text, "CMD:SCAN:FILTER?") ||
+        !strcmp(text, "CMD:SCAN:SCHOOLID?") ||
+        !strcmp(text, "CMD:SCAN:DEVICEID?")) {
+        return trans_cmd_handle_scan_filter_query();
+    }
+    if (!strncmp(text, "CMD:SCAN:SCHOOLID=", 18)) {
+        return trans_cmd_handle_scan_school_id_set(text + 18);
+    }
+    if (!strncmp(text, "CMD:SCAN:DEVICEID=", 18)) {
+        return trans_cmd_handle_scan_device_id_set(text + 18);
+    }
+    if (!strncmp(text, "CMD:SCAN:FILTER=", 16)) {
+        return trans_cmd_handle_scan_filter_set(text + 16);
+    }
     if (text[0] == '{') {
         return trans_cmd_handle_json_set_params(text);
     }
@@ -1035,7 +1390,7 @@ void trans_cmd_proc_init(void)
 
     trans_cmd_uart_register_line_handler(trans_cmd_proc_handle_line);
     trans_cmd_proc_inited = 1;
-    log_info("proc ready: mode/uuid/badge/lock/setParams");
+    log_info("proc ready: mode/uuid/badge/lock/setParams/scanFilter");
 }
 
 #endif

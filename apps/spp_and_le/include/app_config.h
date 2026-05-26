@@ -36,6 +36,16 @@
 // #define LL_SYNC_EN                        CONFIG_APP_LL_SYNC //
 // #define TUYA_DEMO_EN                      CONFIG_APP_TUYA
 
+/*
+ * 板级头需要在 BLE 主从角色选择前参与展开，
+ * 这样才能根据当前产品模式切到 scan-only 或 adv-only。
+ */
+#include "board_config.h"
+
+#ifndef TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+#define TCFG_AC6323A_PRODUCT_MODE_IS_SCAN 0
+#endif
+
 //edr sniff config
 #define SNIFF_MODE_RESET_ANCHOR           0
 //V5.0 扩展广播/扫描使能
@@ -60,8 +70,17 @@
 //蓝牙BLE配置
 #define CONFIG_BT_GATT_COMMON_ENABLE       1 //配置使用gatt公共模块
 #define CONFIG_BT_SM_SUPPORT_ENABLE        0 //配置是否支持加密
-#define CONFIG_BT_GATT_CLIENT_NUM          0 //配置主机client个数 (支持使能1,search profile)
-#define CONFIG_BT_GATT_SERVER_NUM          1 //配置从机server个数
+/*
+ * scan-only 模式使用 client=1/server=0；
+ * 现有广播模式保持 client=0/server=1。
+ */
+#if TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+#define CONFIG_BT_GATT_CLIENT_NUM          1 //scan-only
+#define CONFIG_BT_GATT_SERVER_NUM          0
+#else
+#define CONFIG_BT_GATT_CLIENT_NUM          0
+#define CONFIG_BT_GATT_SERVER_NUM          1 //adv-only
+#endif
 #define CONFIG_BT_GATT_CONNECTION_NUM      (CONFIG_BT_GATT_SERVER_NUM + CONFIG_BT_GATT_CLIENT_NUM) //配置连接个数
 
 //BLE 从机扩展搜索对方服务功能,需要打开GATT CLIENT
@@ -233,9 +252,6 @@
 #if CONFIG_BT_GATT_CONNECTION_NUM > 8
 #error "SUPPORT MAX IS 8 !!!"
 #endif
-
-
-#include "board_config.h"
 
 #include "usb_common_def.h"
 
@@ -421,4 +437,3 @@
 
 
 #endif
-

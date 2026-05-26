@@ -15,17 +15,18 @@
 ifeq ($(OS), Windows_NT)
 # Windows 下工具链位置
 TOOL_DIR := C:/JL/pi32/bin
+UTILS_DIR := ../../../../tools/utils
 CC    := clang.exe
 CXX   := clang.exe
 LD    := q32s-lto-wrapper.exe
 AR    := llvm-ar.exe
-MKDIR := mkdir_win -p
-RM    := rm -rf
+MKDIR := $(UTILS_DIR)/mkdir_win -p
+RM    := $(UTILS_DIR)/rm -rf
 
 SYS_LIB_DIR := C:/JL/pi32/q32s-lib
 SYS_INC_DIR := C:/JL/pi32/q32s-include
 EXT_CFLAGS  := # Windows 下不需要 -D__SHELL__
-export PATH:=$(TOOL_DIR);$(PATH)
+export PATH:=$(UTILS_DIR);$(TOOL_DIR);$(PATH)
 
 ## 后处理脚本
 FIXBAT          := ..\..\..\..\tools\utils\fixbat.exe # 用于处理 utf8->gbk 编码问题
@@ -534,15 +535,20 @@ LINK_AT ?= 1
 # 表示下面的不是一个文件的名字，无论是否存在 all, clean, pre_build 这样的文件
 # 还是要执行命令
 # see: https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: all clean pre_build
+.PHONY: all clean pre_build download
 
 # 不要使用 make 预设置的规则
 # see: https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html
 .SUFFIXES:
 
+POST_ACTION ?= auto
+
 all: pre_build $(OUT_ELF)
 	$(info +POST-BUILD)
-	$(QUITE) $(RUN_POST_SCRIPT) sdk
+	$(QUITE) $(RUN_POST_SCRIPT) sdk $(POST_ACTION)
+
+download: POST_ACTION=download
+download: all
 
 pre_build:
 	$(info +PRE-BUILD)

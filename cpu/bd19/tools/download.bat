@@ -31,7 +31,6 @@
 
 
 
-
 rem @echo off
 setlocal enabledelayedexpansion
 @echo *********************************************************************
@@ -46,6 +45,10 @@ set OBJCOPY=C:\JL\pi32\bin\llvm-objcopy.exe
 set OBJSIZEDUMP=C:\JL\pi32\bin\objsizedump.exe
 set INELF=sdk.elf
 set LZ4_PACKET=lz4_packet.exe
+set POST_ACTION=%~2
+
+if "%POST_ACTION%"=="" set POST_ACTION=%TRANS_DATA_POST_ACTION%
+if "%POST_ACTION%"=="" set POST_ACTION=auto
 
 ::@echo on
 
@@ -81,4 +84,4 @@ copy /b text.bin+data.bin+data_code.bin+aec.bin+aac.bin+bank.bin+aptx.bin app.bi
 
 del bank*.bin common.bin text.bin data.bin bank.bin aac.bin aec.bin aptx.bin
 )
-call download/data_trans/download.bat
+call download/data_trans/download.bat %POST_ACTION%
