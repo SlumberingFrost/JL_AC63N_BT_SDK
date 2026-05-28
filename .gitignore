@@ -60,3 +60,14 @@ cscope.out
 文档/
 文档/Device.log
 文档/System.log
+
+# AC6323A bd19 generated build outputs
+/apps/spp_and_le/board/bd19/AC632N_spp_and_le.depend
+/apps/spp_and_le/board/bd19/AC632N_spp_and_le.layout
+/cpu/bd19/tools/app.bin
+/cpu/bd19/tools/data_code.bin
+/cpu/bd19/tools/sdk.elf.resolution.txt
+/cpu/bd19/tools/sdk.lst
+/cpu/bd19/tools/download/data_trans/app.bin
+/cpu/bd19/tools/download/data_trans/jl_isd.bin
+/cpu/bd19/tools/download/data_trans/jl_isd.fw

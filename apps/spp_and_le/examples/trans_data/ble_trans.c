@@ -764,6 +764,36 @@ static int trans_adv_eir_append_data(uint8_t *buf, uint16_t *offset, uint8_t dat
     return 0;
 }
 
+static void trans_adv_fill_ibeacon_payload(uint8_t *ibeacon)
+{
+    if (!ibeacon) {
+        return;
+    }
+    ibeacon[0] = 0x4C;
+    ibeacon[1] = 0x00;
+    ibeacon[2] = 0x02;
+    ibeacon[3] = 0x15;
+    memcpy(&ibeacon[4], trans_ibeacon_cfg.uuid, 16);
+    ibeacon[20] = (uint8_t)((trans_ibeacon_cfg.major >> 8) & 0xFF);
+    ibeacon[21] = (uint8_t)(trans_ibeacon_cfg.major & 0xFF);
+    ibeacon[22] = (uint8_t)((trans_ibeacon_cfg.minor >> 8) & 0xFF);
+    ibeacon[23] = (uint8_t)(trans_ibeacon_cfg.minor & 0xFF);
+    ibeacon[24] = (uint8_t)trans_ibeacon_cfg.tx_power;
+}
+
+static void trans_adv_fill_school_service_data(uint8_t *school_data)
+{
+    if (!school_data) {
+        return;
+    }
+    school_data[0] = (uint8_t)(TRANS_SCHOOL_ID_SVC_UUID16 & 0xFF);
+    school_data[1] = (uint8_t)((TRANS_SCHOOL_ID_SVC_UUID16 >> 8) & 0xFF);
+    school_data[2] = (uint8_t)((trans_ibeacon_cfg.school_id >> 8) & 0xFF);
+    school_data[3] = (uint8_t)(trans_ibeacon_cfg.school_id & 0xFF);
+    school_data[4] = (uint8_t)((trans_ibeacon_cfg.device_id >> 8) & 0xFF);
+    school_data[5] = (uint8_t)(trans_ibeacon_cfg.device_id & 0xFF);
+}
+
 /*************************************************************************************************/
 /*!
  *  \brief      组织adv包数据，放入buff
@@ -780,7 +810,14 @@ static int trans_make_set_adv_data(void)
 {
     uint16_t offset = 0;
     uint8_t *buf = trans_adv_data;
+#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+    uint8_t school_data[6];
+    const char compat_name[] = TCFG_TRANS_AW31N_COMPAT_ADV_NAME;
+    uint8_t compat_name_len = (uint8_t)(sizeof(compat_name) - 1);
+    uint8_t room_len;
+#else
     uint8_t ibeacon[25];
+#endif
 
     memset(buf, 0, sizeof(trans_adv_data));
 
@@ -797,25 +834,40 @@ static int trans_make_set_adv_data(void)
 #endif
 
     if (trans_uuid_ready) {
+#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+        /*
+         * AW31N 兼容广播布局：
+         * 1. 主ADV优先放 school_id/device_id(Service Data 0x16, UUID16=0xAF31)
+         * 2. 再补 AW31N_BLE 名称前缀，确保对端普通扫描在未及时拿到RSP时仍有兜底入口
+         * 3. iBeacon 主体下沉到RSP，给 AW31N 当前普通扫描模式让出主广播空间
+         */
+        trans_adv_fill_school_service_data(school_data);
+        if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_SERVICE_DATA,
+                                      school_data, sizeof(school_data))) {
+            return -1;
+        }
+        room_len = trans_adv_calc_payload_room(offset);
+        if (compat_name_len > room_len) {
+            compat_name_len = room_len;
+        }
+        if (compat_name_len) {
+            if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_COMPLETE_LOCAL_NAME,
+                                          (const uint8_t *)compat_name, compat_name_len)) {
+                return -1;
+            }
+        }
+#else
         /*
          * 产品协议约束：
          * ADV 保持标准 iBeacon 主体，避免把 school/device/badge 再塞回主广播，
          * 这样扫描侧可以稳定解析 UUID/Major/Minor/TxPower，不受后续业务字段扩展影响。
          */
-        ibeacon[0] = 0x4C;
-        ibeacon[1] = 0x00;
-        ibeacon[2] = 0x02;
-        ibeacon[3] = 0x15;
-        memcpy(&ibeacon[4], trans_ibeacon_cfg.uuid, 16);
-        ibeacon[20] = (uint8_t)((trans_ibeacon_cfg.major >> 8) & 0xFF);
-        ibeacon[21] = (uint8_t)(trans_ibeacon_cfg.major & 0xFF);
-        ibeacon[22] = (uint8_t)((trans_ibeacon_cfg.minor >> 8) & 0xFF);
-        ibeacon[23] = (uint8_t)(trans_ibeacon_cfg.minor & 0xFF);
-        ibeacon[24] = (uint8_t)trans_ibeacon_cfg.tx_power;
+        trans_adv_fill_ibeacon_payload(ibeacon);
         if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
                                       ibeacon, sizeof(ibeacon))) {
             return -1;
         }
+#endif
     }
 
     if (offset > ADV_RSP_PACKET_MAX) {
@@ -842,13 +894,30 @@ static int trans_make_set_rsp_data(void)
 {
     uint16_t offset = 0;
     uint8_t *buf = trans_scan_rsp_data;
+    uint8_t ibeacon[25];
+#if !(TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN)
     uint8_t school_data[6];
     uint8_t vaild_len;
     const char *gap_name = ble_comm_get_gap_name();
     uint8_t name_len = gap_name ? strlen(gap_name) : 0;
+#endif
 
     memset(buf, 0, sizeof(trans_scan_rsp_data));
 
+#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+    /*
+     * AW31N 兼容广播布局下，RSP 让位给 iBeacon：
+     * BADGE 和原始 GAP Name 暂不进入兼容RSP，优先保证对端先在ADV命中 0xAF31，
+     * 再由调试工具/后续链路补看到 iBeacon 主体。
+     */
+    if (trans_uuid_ready) {
+        trans_adv_fill_ibeacon_payload(ibeacon);
+        if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
+                                      ibeacon, sizeof(ibeacon))) {
+            return -1;
+        }
+    }
+#else
     /*
      * 产品协议约束：
      * RSP 里的优先级固定为 BADGE -> SCHOOL_ID/DEVICE_ID -> GAP Name。
@@ -865,12 +934,7 @@ static int trans_make_set_rsp_data(void)
     }
 
     if (trans_uuid_ready) {
-        school_data[0] = (uint8_t)(TRANS_SCHOOL_ID_SVC_UUID16 & 0xFF);
-        school_data[1] = (uint8_t)((TRANS_SCHOOL_ID_SVC_UUID16 >> 8) & 0xFF);
-        school_data[2] = (uint8_t)((trans_ibeacon_cfg.school_id >> 8) & 0xFF);
-        school_data[3] = (uint8_t)(trans_ibeacon_cfg.school_id & 0xFF);
-        school_data[4] = (uint8_t)((trans_ibeacon_cfg.device_id >> 8) & 0xFF);
-        school_data[5] = (uint8_t)(trans_ibeacon_cfg.device_id & 0xFF);
+        trans_adv_fill_school_service_data(school_data);
         vaild_len = trans_adv_calc_payload_room(offset);
         if (sizeof(school_data) <= vaild_len) {
             if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_SERVICE_DATA,
@@ -892,6 +956,7 @@ static int trans_make_set_rsp_data(void)
             }
         }
     }
+#endif
 
     if (offset > ADV_RSP_PACKET_MAX) {
         puts("***rsp_data overflow!!!!!!\n");

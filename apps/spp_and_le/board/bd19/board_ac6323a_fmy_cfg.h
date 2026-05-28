@@ -23,14 +23,14 @@
 //*********************************************************************************//
 // 当前先只抽象两类能力：
 // 1. 普通扫描模式：用于扫描另一台同芯片设备发出的广播
-// 2. 普通广播模式：沿用现有单广播实现
+// 2. 普通广播模式：单广播实现
 #define TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING  0    // scan-only
 #define TCFG_AC6323A_PRODUCT_MODE_BEACON         1    // scan-only
 #define TCFG_AC6323A_PRODUCT_MODE_BADGE          2    // adv-only
 
-// 默认保持当前仓库既有行为：广播模式。
+// 通过宏定义切换模式
 #ifndef TCFG_AC6323A_PRODUCT_MODE
-#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_BEACON
+#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_BADGE
 #endif
 
 #if (TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING) || \

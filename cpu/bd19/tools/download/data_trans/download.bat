@@ -13,10 +13,13 @@ set DOWNLOAD_SKIP_RET=200
 
 if "%POST_ACTION%"=="" set POST_ACTION=%TRANS_DATA_POST_ACTION%
 if "%POST_ACTION%"=="" set POST_ACTION=auto
-if "%KEY_MODE%"=="" set KEY_MODE=AUTO
+if "%KEY_MODE%"=="" set KEY_MODE=OFF
 if "%DOWNLOAD_WAIT_MS%"=="" set DOWNLOAD_WAIT_MS=2000
 if "%DOWNLOAD_RETRY_COUNT%"=="" set DOWNLOAD_RETRY_COUNT=12
 if "%DOWNLOAD_RETRY_DELAY_SEC%"=="" set DOWNLOAD_RETRY_DELAY_SEC=1
+
+rem Default behavior is download without KEY.
+rem Only set TRANS_DATA_KEY_MODE=ON when a KEY-programmed chip must be matched explicitly.
 
 copy ..\..\tone.cfg .
 copy ..\..\cfg_tool.bin .
