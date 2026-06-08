@@ -1199,7 +1199,11 @@ static int trans_cmd_adv_reconfig_ok_resp(const char *label)
 
 static int trans_cmd_handle_mode_query(void)
 {
+#if TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+    return trans_cmd_uart_send_text("MODE:SCAN\r\n");
+#else
     return trans_cmd_uart_send_text("MODE:ADV\r\n");
+#endif
 }
 
 static int trans_cmd_handle_uuid_query(void)

@@ -21,26 +21,38 @@
 //*********************************************************************************//
 //                            产品模式一键切换配置                                //
 //*********************************************************************************//
-// 当前先只抽象两类能力：
+// 当前只保留两种有效模式：
 // 1. 普通扫描模式：用于扫描另一台同芯片设备发出的广播
 // 2. 普通广播模式：单广播实现
-#define TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING  0    // scan-only
-#define TCFG_AC6323A_PRODUCT_MODE_BEACON         1    // scan-only
-#define TCFG_AC6323A_PRODUCT_MODE_BADGE          2    // adv-only
+#define TCFG_AC6323A_PRODUCT_MODE_SCAN           0    // scan-only
+#define TCFG_AC6323A_PRODUCT_MODE_ADV            1    // adv-only
 
 // 通过宏定义切换模式
 #ifndef TCFG_AC6323A_PRODUCT_MODE
-#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_BADGE
+#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_SCAN
 #endif
 
-#if (TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_ANTI_BULLYING) || 
-    (TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_BEACON)
+#if TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_SCAN
 #define TCFG_AC6323A_PRODUCT_MODE_IS_SCAN       1
-#elif TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_BADGE
+#elif TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_ADV
 #define TCFG_AC6323A_PRODUCT_MODE_IS_SCAN       0
 #else
 #error "Invalid TCFG_AC6323A_PRODUCT_MODE value."
 #endif
+
+// AC6323A 普通扫描模式统一复用 PA9 做单灯指示：
+// 1. 开机亮 1s
+// 2. 随后进入亮500ms/灭5000ms稀疏闪烁
+#if TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
+#define TCFG_AC6323A_SCAN_LED_ENABLE            ENABLE_THIS_MOUDLE
+#else
+#define TCFG_AC6323A_SCAN_LED_ENABLE            DISABLE_THIS_MOUDLE
+#endif
+#define TCFG_AC6323A_SCAN_LED_PIN               IO_PORTA_09
+#define TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL      1
+#define TCFG_AC6323A_SCAN_LED_INIT_ON_MS        1000
+#define TCFG_AC6323A_SCAN_LED_WAIT_ON_MS        500
+#define TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS       5000
 
 //*********************************************************************************//
 //                                 UART配置                                        //

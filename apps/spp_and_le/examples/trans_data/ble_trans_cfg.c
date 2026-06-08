@@ -272,7 +272,7 @@ static void trans_uuid_cfg_runtime_default(void)
 {
 #if TCFG_TRANS_UUID_AUTO_DERIVE_FROM_MAC
     const uint8_t *mac = bt_get_mac_addr();
-    static const uint8_t prefix[10] = {'A', 'W', '3', '1', 'N', 'B', 'L', 'E', 'U', 'U'};
+    static const uint8_t prefix[10] = {'A', 'C', '6', '3', '2', '3', 'A', 'B', 'L', 'E'};
 
     if (mac) {
         memcpy(trans_ibeacon_cfg.uuid, prefix, sizeof(prefix));

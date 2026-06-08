@@ -1,59 +1,158 @@
 
-[16:40:13.099]OUT→◇CMD:SCAN:FILTER?□
-[16:40:33.754]OUT→◇CMD:MODE?
+[14:38:28.764]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:29.759]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:30.762]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:31.307]OUT→◇CMD:MODE?
 □
-[16:40:33.760]IN←◆MODE:ADV
+[14:38:31.321]IN←◆MODE:SCAN
 
-[16:40:59.844]OUT→◇CMD:MODE?
+[14:38:31.752]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:32.759]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:33.766]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:34.757]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:35.763]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:36.753]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:37.761]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:38.767]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:39.757]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:40.764]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:41.755]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:42.762]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:43.752]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:44.759]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:45.765]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:45.909]OUT→◇CMD:SCAN:FILTER?
 □
-[16:40:59.849]IN←◆MODE:ADV
+[14:38:45.939]IN←◆{"cmd":"getResult","retCode":0,"schoolId":0,"deviceId":0,"enable":1}
 
-[16:41:20.393]OUT→◇{"cmd":"setParams","deviceId":1235,"schoolId":2}
+[14:38:46.755]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:47.760]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:48.767]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:49.758]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:50.765]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:51.320]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":1}
 □
-[16:41:20.418]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":1235}
+[14:38:51.355]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":1,"deviceId":1}
 
-[16:41:30.423]IN←◆{"cmd":"stopBroadcast"}
+[14:38:51.754]IN←◆{"cmd":"scanResult","data":[]}
 
-[16:42:17.623]OUT→◇{"cmd":"setParams","deviceId":1235,"schoolId":2}
+[14:38:52.760]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:53.767]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:54.673]OUT→◇CMD:SCAN:FILTER?
 □
-[16:42:17.645]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":1235}
+[14:38:54.678]IN←◆{"cmd"
+[14:38:54.705]IN←◆:"getResult","retCode":0,"schoolId":1,"deviceId":1,"enable":1}
 
-[16:42:27.652]IN←◆{"cmd":"stopBroadcast"}
+[14:38:54.753]IN←◆{"cmd":"scanResult","data":[]}
 
-[16:42:33.804]OUT→◇{"cmd":"setParams","deviceId":521,"schoolId":2}
+[14:38:55.759]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:56.766]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:57.757]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:38:58.015]OUT→◇CMD:SCAN:FILTER?
 □
-[16:42:33.827]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":521}
+[14:38:58.029]IN←◆{"cmd":"getResult","retCode":0,"schoolId":1,"deviceId":1,"enable":1}
 
-[16:42:43.833]IN←◆{"cmd":"stopBroadcast"}
+[14:38:58.764]IN←◆{"cmd":"scanResult","data":[]}
 
-[16:43:01.914]OUT→◇CMD:MODE?
-□
-[16:43:01.918]IN←◆MODE:ADV
+[14:38:59.754]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:44:38.851]OUT→◇CMD:MODE?
-□
-[16:44:38.856]IN←◆MODE:ADV
+[14:39:00.761]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:44:48.413]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":2}
-□
-[16:44:48.435]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":1}
+[14:39:01.768]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:44:58.440]IN←◆{"cmd":"stopBroadcast"}
+[14:39:02.758]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:45:09.236]OUT→◇{"cmd":"setParams","deviceId":321,"schoolId":2}
-□
-[16:45:09.259]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":321}
+[14:39:03.765]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:45:19.267]IN←◆{"cmd":"stopBroadcast"}
+[14:39:04.755]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:46:42.112]OUT→◇{"cmd":"setParams","deviceId":321,"schoolId":2}
-□
-[16:46:42.135]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":321}
+[14:39:05.762]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:46:52.141]IN←◆{"cmd":"stopBroadcast"}
+[14:39:06.752]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:47:34.409]OUT→◇{"cmd":"setParams","deviceId":321,"schoolId":2}
-□
-[16:47:34.431]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":2,"deviceId":321}
+[14:39:07.758]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
 
-[16:47:44.437]IN←◆{"cmd":"stopBroadcast"}
+[14:39:08.765]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:09.756]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:11.753]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:12.761]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:13.767]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:14.757]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:15.764]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:16.754]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:17.761]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:18.768]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:19.758]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:20.764]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:21.755]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:22.762]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:23.753]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":2}]}
+
+[14:39:24.759]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:25.766]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:26.150]IN←◆[00:02:31.862]btprofile: qfull: 4, 0
+
+[14:39:26.757]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:27.763]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:28.754]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:29.760]IN←◆{"cmd":"scanResult","data":[{"schoolId":1
+[14:39:29.780]IN←◆,"deviceId":5}]}
+
+[14:39:31.759]IN←◆{"cmd":"scanResult","data":[]}
+
+[14:39:32.765]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:33.755]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:34.762]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:35.752]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}
+
+[14:39:36.759]IN←◆{"cmd":"scanResult","data":[{"schoolId":1,"deviceId":5}]}

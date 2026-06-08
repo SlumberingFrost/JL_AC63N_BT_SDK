@@ -136,6 +136,123 @@ static adv_cfg_t trans_server_adv_config;
 #endif
 static int trans_set_params_stop_adv_timer;
 
+#ifndef TCFG_AC6323A_SCAN_LED_ENABLE
+#define TCFG_AC6323A_SCAN_LED_ENABLE                 0
+#endif
+#ifndef TCFG_AC6323A_SCAN_LED_PIN
+#define TCFG_AC6323A_SCAN_LED_PIN                    NO_CONFIG_PORT
+#endif
+#ifndef TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL
+#define TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL           1
+#endif
+#ifndef TCFG_AC6323A_SCAN_LED_INIT_ON_MS
+#define TCFG_AC6323A_SCAN_LED_INIT_ON_MS             1000
+#endif
+#ifndef TCFG_AC6323A_SCAN_LED_WAIT_ON_MS
+#define TCFG_AC6323A_SCAN_LED_WAIT_ON_MS             500
+#endif
+#ifndef TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS
+#define TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS            5000
+#endif
+
+#if TCFG_AC6323A_SCAN_LED_ENABLE && TCFG_AC6323A_PRODUCT_MODE_IS_SCAN && (TCFG_AC6323A_SCAN_LED_PIN != NO_CONFIG_PORT)
+#define TRANS_SCAN_LED_LEVEL_ON  (TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL ? 1 : 0)
+#define TRANS_SCAN_LED_LEVEL_OFF (TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL ? 0 : 1)
+
+static int trans_scan_led_phase_timer_id;
+static uint8_t trans_scan_led_phase_on;
+static uint8_t trans_scan_led_started;
+
+static void trans_scan_led_timeout(void *priv);
+
+static void trans_scan_led_log_sparse_phase(uint8_t led_on, uint32_t hold_ms)
+{
+    char msg[80];
+    int len = snprintf(msg, sizeof(msg),
+                       "{\"tag\":\"LED_SPARSE\",\"phase\":\"%s\",\"holdMs\":%u}\r\n",
+                       led_on ? "ON" : "OFF",
+                       (unsigned int)hold_ms);
+
+    if (len > 0 && len < (int)sizeof(msg)) {
+        (void)trans_cmd_uart_send_text(msg);
+    }
+}
+
+static void trans_scan_led_apply(uint8_t is_on)
+{
+    gpio_write(TCFG_AC6323A_SCAN_LED_PIN, is_on ? TRANS_SCAN_LED_LEVEL_ON : TRANS_SCAN_LED_LEVEL_OFF);
+}
+
+static void trans_scan_led_gpio_init(void)
+{
+    gpio_set_die(TCFG_AC6323A_SCAN_LED_PIN, 1);
+    gpio_set_pull_up(TCFG_AC6323A_SCAN_LED_PIN, 0);
+    gpio_set_pull_down(TCFG_AC6323A_SCAN_LED_PIN, 0);
+    gpio_direction_output(TCFG_AC6323A_SCAN_LED_PIN, TRANS_SCAN_LED_LEVEL_OFF);
+}
+
+static void trans_scan_led_phase_timer_stop(void)
+{
+    if (trans_scan_led_phase_timer_id) {
+        sys_timeout_del(trans_scan_led_phase_timer_id);
+        trans_scan_led_phase_timer_id = 0;
+    }
+}
+
+static void trans_scan_led_phase_schedule(uint8_t led_on)
+{
+    uint32_t hold_ms = led_on ? TCFG_AC6323A_SCAN_LED_WAIT_ON_MS : TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS;
+
+    trans_scan_led_phase_timer_stop();
+    trans_scan_led_phase_on = led_on ? 1 : 0;
+    trans_scan_led_apply(led_on);
+    trans_scan_led_log_sparse_phase(led_on, hold_ms);
+    trans_scan_led_phase_timer_id = sys_timeout_add(NULL, trans_scan_led_timeout, hold_ms);
+}
+
+static void trans_scan_led_timeout(void *priv)
+{
+    (void)priv;
+    trans_scan_led_phase_timer_id = 0;
+    trans_scan_led_phase_schedule(trans_scan_led_phase_on ? 0 : 1);
+}
+
+static void trans_scan_led_stop_internal(void)
+{
+    trans_scan_led_phase_timer_stop();
+    trans_scan_led_apply(0);
+    trans_scan_led_started = 0;
+}
+
+static void trans_scan_led_start_internal(void)
+{
+    if (trans_scan_led_started) {
+        return;
+    }
+
+    trans_scan_led_gpio_init();
+    trans_scan_led_started = 1;
+    if (TCFG_AC6323A_SCAN_LED_INIT_ON_MS) {
+        trans_scan_led_phase_timer_stop();
+        trans_scan_led_phase_on = 0;
+        trans_scan_led_apply(1);
+        trans_scan_led_phase_timer_id = sys_timeout_add(NULL, trans_scan_led_timeout,
+                                                        TCFG_AC6323A_SCAN_LED_INIT_ON_MS);
+    } else {
+        trans_scan_led_phase_schedule(1);
+    }
+}
+#else
+static void trans_scan_led_start_internal(void)
+{
+}
+
+static void trans_scan_led_stop_internal(void)
+{
+}
+
+#endif
+
 #define TRANS_IBEACON_CFG_VALID 0xA5
 //-------------------------------------------------------------------------------------
 static uint16_t trans_att_read_callback(hci_con_handle_t connection_handle, uint16_t att_handle, uint16_t offset, uint8_t *buffer, uint16_t buffer_size);
@@ -764,6 +881,7 @@ static int trans_adv_eir_append_data(uint8_t *buf, uint16_t *offset, uint8_t dat
     return 0;
 }
 
+#if CONFIG_BT_GATT_SERVER_NUM
 static void trans_adv_fill_ibeacon_payload(uint8_t *ibeacon)
 {
     if (!ibeacon) {
@@ -805,19 +923,11 @@ static void trans_adv_fill_school_service_data(uint8_t *school_data)
  *  \note
  */
 /*************************************************************************************************/
-#if CONFIG_BT_GATT_SERVER_NUM
 static int trans_make_set_adv_data(void)
 {
     uint16_t offset = 0;
     uint8_t *buf = trans_adv_data;
-#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
-    uint8_t school_data[6];
-    const char compat_name[] = TCFG_TRANS_AW31N_COMPAT_ADV_NAME;
-    uint8_t compat_name_len = (uint8_t)(sizeof(compat_name) - 1);
-    uint8_t room_len;
-#else
     uint8_t ibeacon[25];
-#endif
 
     memset(buf, 0, sizeof(trans_adv_data));
 
@@ -834,40 +944,16 @@ static int trans_make_set_adv_data(void)
 #endif
 
     if (trans_uuid_ready) {
-#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
         /*
-         * AW31N 兼容广播布局：
-         * 1. 主ADV优先放 school_id/device_id(Service Data 0x16, UUID16=0xAF31)
-         * 2. 再补 AW31N_BLE 名称前缀，确保对端普通扫描在未及时拿到RSP时仍有兜底入口
-         * 3. iBeacon 主体下沉到RSP，给 AW31N 当前普通扫描模式让出主广播空间
-         */
-        trans_adv_fill_school_service_data(school_data);
-        if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_SERVICE_DATA,
-                                      school_data, sizeof(school_data))) {
-            return -1;
-        }
-        room_len = trans_adv_calc_payload_room(offset);
-        if (compat_name_len > room_len) {
-            compat_name_len = room_len;
-        }
-        if (compat_name_len) {
-            if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_COMPLETE_LOCAL_NAME,
-                                          (const uint8_t *)compat_name, compat_name_len)) {
-                return -1;
-            }
-        }
-#else
-        /*
-         * 产品协议约束：
-         * ADV 保持标准 iBeacon 主体，避免把 school/device/badge 再塞回主广播，
-         * 这样扫描侧可以稳定解析 UUID/Major/Minor/TxPower，不受后续业务字段扩展影响。
+         * AC6323A 最终广播口径：
+         * ADV 固定承载标准 iBeacon 主体，主广播不混入业务字段，
+         * 后续业务扩展统一下沉到扫描响应包。
          */
         trans_adv_fill_ibeacon_payload(ibeacon);
         if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
                                       ibeacon, sizeof(ibeacon))) {
             return -1;
         }
-#endif
     }
 
     if (offset > ADV_RSP_PACKET_MAX) {
@@ -894,32 +980,15 @@ static int trans_make_set_rsp_data(void)
 {
     uint16_t offset = 0;
     uint8_t *buf = trans_scan_rsp_data;
-    uint8_t ibeacon[25];
-#if !(TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN)
     uint8_t school_data[6];
     uint8_t vaild_len;
     const char *gap_name = ble_comm_get_gap_name();
     uint8_t name_len = gap_name ? strlen(gap_name) : 0;
-#endif
 
     memset(buf, 0, sizeof(trans_scan_rsp_data));
 
-#if TCFG_TRANS_AW31N_COMPAT_ADV_LAYOUT && !TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
     /*
-     * AW31N 兼容广播布局下，RSP 让位给 iBeacon：
-     * BADGE 和原始 GAP Name 暂不进入兼容RSP，优先保证对端先在ADV命中 0xAF31，
-     * 再由调试工具/后续链路补看到 iBeacon 主体。
-     */
-    if (trans_uuid_ready) {
-        trans_adv_fill_ibeacon_payload(ibeacon);
-        if (trans_adv_eir_append_data(buf, &offset, HCI_EIR_DATATYPE_MANUFACTURER_SPECIFIC_DATA,
-                                      ibeacon, sizeof(ibeacon))) {
-            return -1;
-        }
-    }
-#else
-    /*
-     * 产品协议约束：
+     * AC6323A 最终广播口径：
      * RSP 里的优先级固定为 BADGE -> SCHOOL_ID/DEVICE_ID -> GAP Name。
      * 当 31 字节空间不足时，业务字段必须优先保留，名称最后截断。
      */
@@ -956,7 +1025,6 @@ static int trans_make_set_rsp_data(void)
             }
         }
     }
-#endif
 
     if (offset > ADV_RSP_PACKET_MAX) {
         puts("***rsp_data overflow!!!!!!\n");
@@ -1204,6 +1272,7 @@ void bt_ble_init(void)
     trans_boot_trace("bt_ble_init: ble_gatt_client_scan_enable(1) begin");
     ble_gatt_client_scan_enable(1);
     trans_boot_trace("bt_ble_init: ble_gatt_client_scan_enable(1) done");
+    trans_scan_led_start_internal();
     log_info("scan-only: force scan enable");
 #endif
 
@@ -1231,6 +1300,7 @@ void bt_ble_init(void)
 void bt_ble_exit(void)
 {
     log_info("%s\n", __FUNCTION__);
+    trans_scan_led_stop_internal();
 
 #if CONFIG_BT_GATT_CLIENT_NUM
     trans_client_exit();

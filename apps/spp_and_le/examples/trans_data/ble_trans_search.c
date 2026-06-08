@@ -47,11 +47,12 @@
 #define trans_scan_boot_trace(fmt, ...) printf("[SCAN-BOOT] " fmt "\r\n", ##__VA_ARGS__)
 
 #define SET_SCAN_TYPE       SCAN_ACTIVE
-#define SET_SCAN_INTERVAL   ADV_SCAN_MS(24) // unit: 0.625ms
-#define SET_SCAN_WINDOW     ADV_SCAN_MS(8)  // unit: 0.625ms, <= SET_SCAN_INTERVAL
+#define SET_SCAN_INTERVAL   ADV_SCAN_MS(500) // unit: 0.625ms
+#define SET_SCAN_WINDOW     ADV_SCAN_MS(500) // unit: 0.625ms, <= SET_SCAN_INTERVAL
 #define TRANS_SCHOOL_ID_SVC_UUID16 0xAF31
 #define TRANS_SCAN_LIST_PERIOD_MS 1000
-#define TRANS_SCAN_LIST_CACHE_MAX 8
+#define TRANS_SCAN_LIST_CACHE_MAX 64
+#define TRANS_SCAN_LIST_SEND_LIMIT 8
 #define TRANS_SCAN_LIST_TTL_MS 5000
 #define TRANS_SCAN_MERGE_WINDOW_MS 1000
 #define TRANS_SCAN_MERGE_SLOTS 4
@@ -112,6 +113,7 @@ static trans_scan_list_cache_t trans_scan_list_cache[TRANS_SCAN_LIST_CACHE_MAX];
 static u16 trans_scan_list_timer;
 static u16 trans_scan_health_timer;
 static uint8_t trans_scan_empty_frame_streak;
+static uint8_t trans_scan_list_round_robin_cursor;
 static uint32_t trans_scan_health_last_report_tick;
 static uint32_t trans_scan_health_last_recover_tick;
 static uint32_t trans_scan_health_recover_window_tick;
@@ -143,26 +145,62 @@ static uint8_t trans_scan_tick_expired(uint32_t now_tick, uint32_t start_tick, u
     return time_after(now_tick, expire_tick) ? 1 : 0;
 }
 
-static uint8_t trans_scan_school_id_filter_match(uint16_t school_id)
+static uint8_t trans_scan_pair_filter_match_fields(uint8_t has_school_id, uint16_t school_id,
+                                                   uint8_t has_device_id, uint16_t device_id)
 {
     uint16_t expected_school_id = 0;
+    uint16_t expected_device_id = TCFG_TRANS_SCAN_DEVICE_FILTER_DEFAULT_ID;
     uint8_t enable = 0;
 
-    if (trans_scan_filter_get(&expected_school_id, NULL, &enable)) {
+    (void)has_device_id;
+    (void)device_id;
+    (void)expected_device_id;
+
+    if (!has_school_id) {
+        return 0;
+    }
+    if (trans_scan_filter_get(&expected_school_id, &expected_device_id, &enable)) {
         return 1;
     }
     if (!enable) {
         return 1;
     }
-    return school_id == expected_school_id;
+    if (school_id != expected_school_id) {
+        return 0;
+    }
+    /*
+     * 当前扫描链路只按 schoolId 命中过滤。
+     * deviceId 继续参与保存、上报和串口回读，但不再单独拦截结果，
+     * 这样可以兼容广播端 deviceId 变化而 schoolId 不变的量产场景。
+     */
+    return 1;
 }
 
 static uint8_t trans_scan_pair_filter_match(const trans_scan_pair_parse_t *pair_info)
 {
-    if (!pair_info || !pair_info->has_school_id) {
+    if (!pair_info) {
         return 0;
     }
-    return trans_scan_school_id_filter_match(pair_info->school_id);
+    return trans_scan_pair_filter_match_fields(pair_info->has_school_id, pair_info->school_id,
+                                               pair_info->has_device_id, pair_info->device_id);
+}
+
+static uint8_t trans_scan_merge_slot_filter_match(const trans_scan_merge_slot_t *slot)
+{
+    if (!slot || !slot->valid) {
+        return 0;
+    }
+    return trans_scan_pair_filter_match_fields(slot->has_school_id, slot->school_id,
+                                               slot->has_device_id, slot->device_id);
+}
+
+static uint8_t trans_scan_list_cache_entry_filter_match(const trans_scan_list_cache_t *entry)
+{
+    if (!entry || !entry->valid) {
+        return 0;
+    }
+    return trans_scan_pair_filter_match_fields(entry->has_school_id, entry->school_id,
+                                               entry->has_device_id, entry->device_id);
 }
 
 static void trans_scan_hex_encode(const uint8_t *src, uint8_t src_len, char *dst, uint16_t dst_len)
@@ -274,11 +312,25 @@ static void trans_scan_list_cache_reset(void)
     memset(trans_scan_merge_slots, 0, sizeof(trans_scan_merge_slots));
     memset(trans_scan_list_cache, 0, sizeof(trans_scan_list_cache));
     trans_scan_empty_frame_streak = 0;
+    trans_scan_list_round_robin_cursor = 0;
 }
 
 static void trans_scan_send_empty_result(void)
 {
     (void)trans_cmd_uart_send_text("{\"cmd\":\"scanResult\",\"data\":[]}\r\n");
+}
+
+static void trans_scan_send_single_result(uint16_t school_id, int device_id_num)
+{
+    char msg[TRANS_SCAN_TX_LINE_MAX];
+    int len = snprintf(msg, sizeof(msg),
+                       "{\"cmd\":\"scanResult\",\"data\":[{\"schoolId\":%u,\"deviceId\":%d}]}\r\n",
+                       school_id,
+                       device_id_num);
+
+    if (len > 0 && len < (int)sizeof(msg)) {
+        (void)trans_cmd_uart_send_text(msg);
+    }
 }
 
 static int trans_scan_list_cache_find(uint8_t addr_type, const uint8_t *addr)
@@ -367,61 +419,50 @@ static void trans_scan_list_cache_update_from_merge(const trans_scan_merge_slot_
 
 static void trans_scan_list_send_frame(void)
 {
-    uint8_t i;
-    uint16_t item_cnt = 0;
-    uint16_t off = 0;
+    uint8_t step;
+    uint8_t sent_cnt = 0;
+    uint8_t cursor = trans_scan_list_round_robin_cursor;
+    uint8_t last_sent_idx = cursor;
     uint32_t now_tick = trans_scan_now_tick();
-    char msg[TRANS_SCAN_TX_LINE_MAX];
+    uint16_t active_cnt;
 
-    (void)trans_scan_list_cache_get_active_count(now_tick);
-    off = (uint16_t)snprintf(msg, sizeof(msg), "{\"cmd\":\"scanResult\",\"data\":[");
-    if (off >= sizeof(msg)) {
-        return;
-    }
-
-    for (i = 0; i < TRANS_SCAN_LIST_CACHE_MAX; i++) {
-        trans_scan_list_cache_t *entry = &trans_scan_list_cache[i];
-        int device_id_num;
-        int len;
-
-        if (!entry->valid) {
-            continue;
-        }
-        if (!entry->has_school_id) {
-            continue;
-        }
-        if (!trans_scan_school_id_filter_match(entry->school_id)) {
-            continue;
-        }
-        device_id_num = entry->has_device_id ? (int)entry->device_id : -1;
-        len = snprintf(msg + off, sizeof(msg) - off,
-                       "%s{\"schoolId\":%u,\"deviceId\":%d}",
-                       item_cnt ? "," : "",
-                       entry->school_id,
-                       device_id_num);
-        if (len < 0 || len >= (int)(sizeof(msg) - off)) {
-            break;
-        }
-        off += (uint16_t)len;
-        item_cnt++;
-    }
-
-    if (!item_cnt) {
+    active_cnt = trans_scan_list_cache_get_active_count(now_tick);
+    if (!active_cnt) {
         if (trans_scan_empty_frame_streak < 0xFF) {
             trans_scan_empty_frame_streak++;
         }
-        if (trans_scan_empty_frame_streak < TRANS_SCAN_EMPTY_REPORT_HYSTERESIS) {
-            return;
+        if (trans_scan_empty_frame_streak >= TRANS_SCAN_EMPTY_REPORT_HYSTERESIS) {
+            trans_scan_send_empty_result();
         }
-        trans_scan_send_empty_result();
+        return;
+    }
+
+    for (step = 0; step < TRANS_SCAN_LIST_CACHE_MAX && sent_cnt < TRANS_SCAN_LIST_SEND_LIMIT; step++) {
+        uint8_t idx = (uint8_t)((cursor + step) % TRANS_SCAN_LIST_CACHE_MAX);
+        trans_scan_list_cache_t *entry = &trans_scan_list_cache[idx];
+        int device_id_num;
+
+        if (!trans_scan_list_cache_entry_filter_match(entry)) {
+            continue;
+        }
+        device_id_num = entry->has_device_id ? (int)entry->device_id : -1;
+        trans_scan_send_single_result(entry->school_id, device_id_num);
+        sent_cnt++;
+        last_sent_idx = idx;
+    }
+
+    if (!sent_cnt) {
+        if (trans_scan_empty_frame_streak < 0xFF) {
+            trans_scan_empty_frame_streak++;
+        }
+        if (trans_scan_empty_frame_streak >= TRANS_SCAN_EMPTY_REPORT_HYSTERESIS) {
+            trans_scan_send_empty_result();
+        }
         return;
     }
 
     trans_scan_empty_frame_streak = 0;
-    if (snprintf(msg + off, sizeof(msg) - off, "]}\r\n") >= (int)(sizeof(msg) - off)) {
-        return;
-    }
-    (void)trans_cmd_uart_send_text(msg);
+    trans_scan_list_round_robin_cursor = (uint8_t)((last_sent_idx + 1) % TRANS_SCAN_LIST_CACHE_MAX);
 }
 
 static void trans_scan_health_reset_runtime(void)
@@ -532,7 +573,7 @@ static void trans_scan_merge_report_and_clear(trans_scan_merge_slot_t *slot)
     if (!slot || !slot->valid) {
         return;
     }
-    if (slot->has_school_id && trans_scan_school_id_filter_match(slot->school_id)) {
+    if (trans_scan_merge_slot_filter_match(slot)) {
         trans_scan_list_cache_update_from_merge(slot);
     }
     trans_scan_merge_slot_clear(slot);
@@ -976,7 +1017,7 @@ int trans_client_search_remote_stop(u16 conn_handle)
 }
 
 
-/*scan-only 骨架：上电即扫，但不自动建连，也不做业务解析*/
+/*scan-only 工作模式：上电即扫，持续主动扫描，不自动建连。*/
 static const scan_conn_cfg_t trans_client_scan_cfg = {
     .scan_auto_do = 1,
     .creat_auto_do = 0,

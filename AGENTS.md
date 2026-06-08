@@ -7,6 +7,17 @@
 - 路径必须指向当前工作区中的实际文件，并尽量附带准确行号，便于用户点击后直接跳转到对应位置。
 - 不要只写纯文本文件名、`line 46` 这类不可点击描述；如果能定位到具体位置，就直接给出可点击链接。
 
+## AW6323A 烧录打包说明
+
+- 当前数传工程的一拖八烧录产物目录固定为 `cpu/bd19/tools/download/data_trans/`。
+- 该目录下的 `jl_isd.fw` 是普通未加 KEY 的固件包；若烧录器提示“固件未被添加KEY”，不要继续使用这个文件。
+- 若需要走 KEY/授权烧录流程，应优先使用同目录下的 `jl_isd_[已授权].fw`；`update.ufw` / `update_[已授权].ufw` 属于升级包，不作为一拖八主烧录文件。
+- 当前 KEY 打包逻辑在 `cpu/bd19/tools/download/data_trans/download.bat`，默认配置是无 KEY。
+- 如需启用 KEY，至少确认两点：
+  1. `download.bat` 里的 `KEY_FILE` 指向有效的 `.key` 文件。
+  2. 将 `if "%KEY_MODE%"=="" set KEY_MODE=OFF` 改为 `if "%KEY_MODE%"=="" set KEY_MODE=ON`，或直接将 `KEY_MODE` 固定为 `ON`，使脚本进入 `call :run_download_with_retry -key "%KEY_FILE%"` 分支。
+- 如果只需要普通直烧或本地打包，不要开启 KEY；当前脚本默认的无 KEY 行为是预期配置。
+
 ## AW6323A 单广播功能测试步骤
 
 以下步骤用于验证当前 `AW6323A + UART0(PA1/PA2)` 单广播方案。测试时，主控或串口工具统一通过 `UART0` 与蓝牙芯片通信，参数固定为 `115200 8N1`。当前串口分帧对 `\r` 和 `\n` 都会收尾，但测试口径统一要求所有命令以 `\r\n` 结束。
@@ -46,7 +57,7 @@
 
 ## AW6323A 扫描功能测试步骤
 
-以下步骤用于验证当前 `AW6323A + UART0(PA1/PA2)` 扫描方案。测试前需确保设备烧录的是扫描模式固件，即 `TCFG_AC6323A_PRODUCT_MODE` 选为 `ANTI_BULLYING` 或 `BEACON`；主控或串口工具统一通过 `UART0` 与蓝牙芯片通信，参数固定为 `115200 8N1`，所有命令必须以 `\r\n` 结束。
+以下步骤用于验证当前 `AW6323A + UART0(PA1/PA2)` 扫描方案。测试前需确保设备烧录的是扫描模式固件，即 `TCFG_AC6323A_PRODUCT_MODE` 选为 `SCAN`；主控或串口工具统一通过 `UART0` 与蓝牙芯片通信，参数固定为 `115200 8N1`，所有命令必须以 `\r\n` 结束。
 
 1. 上电基础检查  
    预期串口先输出启动日志，并出现 `ready: uart0 baud=115200, tx=1, rx=2`、`bt_ble_init: trans_scan_filter_cfg_load begin/done`、`bt_ble_init: ble_gatt_client_scan_enable(1) begin/done`、`scan-only: force scan enable`、`proc ready: mode/uuid/badge/lock/setParams/scanFilter`。这表明扫描配置已加载、扫描已自动开启、串口命令处理已就绪。
