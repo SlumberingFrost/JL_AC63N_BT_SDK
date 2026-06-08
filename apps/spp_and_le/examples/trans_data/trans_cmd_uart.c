@@ -14,8 +14,8 @@
 #include "debug.h"
 
 #define TRANS_CMD_UART_BAUD_RATE         115200
-#define TRANS_CMD_UART_RX_SIZE           0x100
-#define TRANS_CMD_UART_LINE_BUF_SIZE     0x100
+#define TRANS_CMD_UART_RX_SIZE           0x200
+#define TRANS_CMD_UART_LINE_BUF_SIZE     0x200
 
 extern void uart_db_regiest_recieve_callback(void *rx_cb);
 
@@ -44,6 +44,8 @@ static uint8_t trans_cmd_uart_line_corrupt;
 static uint8_t trans_cmd_uart_inited;
 static uint8_t trans_cmd_uart_rx_overflow;
 static trans_cmd_uart_line_handler_t trans_cmd_uart_line_handler;
+
+static int trans_cmd_uart_send_trace_reason(const char *reason, const uint8_t *buf, uint16_t len);
 
 static int trans_cmd_uart_send_unknown_cmd(void)
 {
@@ -101,6 +103,7 @@ static void trans_cmd_uart_dispatch_line(const uint8_t *line, uint16_t len)
     }
 
     if (ret) {
+        trans_cmd_uart_send_trace_reason("DISPATCH_FAIL", line, len);
         trans_cmd_uart_send_unknown_cmd();
     }
 }
@@ -113,14 +116,16 @@ static void trans_cmd_uart_finish_line(void)
          * 超长帧直接整条丢弃到行结束，避免前一条残留字节串到下一条命令，
          * 造成量产阶段“偶发误命中”的隐蔽问题。
          */
-        trans_cmd_uart_send_unknown_cmd();
-    } else if (trans_cmd_uart_line_corrupt) {
-        /*
-         * ASCII 文本协议里混入 0x00 等控制字节，通常意味着上位机链路丢字节或旧半帧被污染。
-         * 这类帧不继续分发给业务层，避免把脏数据误解释成合法命令。
-         */
+        trans_cmd_uart_send_trace_reason("LINE_OVERFLOW", trans_cmd_uart_line_buffer, trans_cmd_uart_line_len);
         trans_cmd_uart_send_unknown_cmd();
     } else if (trans_cmd_uart_line_len) {
+        /*
+         * 量产串口工具偶发会在长帧中夹带控制字节。这里不再因为单个脏字节整条丢弃，
+         * 而是尽量保留已收集到的可见 ASCII，让上层继续做命令锚点恢复。
+         */
+        if (trans_cmd_uart_line_corrupt) {
+            trans_cmd_uart_send_trace_reason("LINE_CORRUPT", trans_cmd_uart_line_buffer, trans_cmd_uart_line_len);
+        }
         trans_cmd_uart_line_buffer[trans_cmd_uart_line_len] = '\0';
         trans_cmd_uart_dispatch_line(trans_cmd_uart_line_buffer, trans_cmd_uart_line_len);
     }
@@ -159,14 +164,15 @@ static void trans_cmd_uart_feed_bytes(const uint8_t *packet, uint16_t len)
             continue;
         }
 
-        if (trans_cmd_uart_line_corrupt) {
-            continue;
-        }
-
         if (trans_cmd_uart_is_invalid_ctrl(ch)) {
             if (!trans_cmd_uart_line_len) {
                 continue;
             }
+            /*
+             * 长命令链路优先保证“可恢复”：
+             * 中间混入单个控制字节时，仅记录异常并跳过该字节，
+             * 不再直接把整条命令判死。
+             */
             trans_cmd_uart_line_corrupt = 1;
             continue;
         }
@@ -255,6 +261,38 @@ int trans_cmd_uart_send_text(const char *text)
     }
 
     return trans_cmd_uart_send_bytes((const uint8_t *)text, strlen(text));
+}
+
+static int trans_cmd_uart_send_trace_reason(const char *reason, const uint8_t *buf, uint16_t len)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    char out[96];
+    uint16_t pos = 0;
+    uint16_t i;
+    uint16_t show_len;
+
+    if (!reason) {
+        return -1;
+    }
+
+    pos += (uint16_t)snprintf(out + pos, sizeof(out) - pos, "TRACE:UART:%s len=%u", reason, (unsigned int)len);
+    if (buf && len && pos < sizeof(out)) {
+        show_len = len > 8 ? 8 : len;
+        pos += (uint16_t)snprintf(out + pos, sizeof(out) - pos, " head=");
+        for (i = 0; i < show_len && (pos + 3) < sizeof(out); i++) {
+            out[pos++] = hex[(buf[i] >> 4) & 0x0F];
+            out[pos++] = hex[buf[i] & 0x0F];
+            if (i != (show_len - 1)) {
+                out[pos++] = '.';
+            }
+        }
+    }
+    if ((pos + 2) < sizeof(out)) {
+        out[pos++] = '\r';
+        out[pos++] = '\n';
+    }
+    out[pos] = '\0';
+    return trans_cmd_uart_send_text(out);
 }
 
 int trans_cmd_uart_init(void)

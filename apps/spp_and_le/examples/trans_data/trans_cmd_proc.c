@@ -28,6 +28,9 @@ typedef struct {
  * 避免每次命令分发都在栈上压一组大数组，直接拉高链接期 stack warning。
  */
 static trans_cmd_uuid_parse_scratch_t trans_cmd_uuid_parse_scratch;
+static char trans_cmd_line_scratch[256];
+
+#define TRANS_CMD_SET_UUID_TRACE_BANNER   "TRACE:SETUUID:PROBE_V2\r\n"
 
 typedef struct {
     uint16_t school_id;
@@ -47,6 +50,10 @@ typedef struct {
     uint8_t has_school_id;
     uint8_t has_device_id;
 } trans_cmd_set_uuid_t;
+
+static const char *trans_cmd_skip_line_prefix(const char *text);
+static int trans_cmd_handle_uuid_set(const char *line);
+static int trans_cmd_handle_json_set_uuid(const char *line);
 
 static char trans_cmd_ascii_upper(char c)
 {
@@ -246,6 +253,217 @@ static int trans_cmd_send_literal(const char *text)
     return trans_cmd_uart_send_text(text);
 }
 
+static void trans_cmd_set_uuid_trace(const char *stage)
+{
+    if (!stage || !stage[0]) {
+        return;
+    }
+    (void)trans_cmd_uart_send_text("TRACE:SETUUID:");
+    (void)trans_cmd_uart_send_text(stage);
+    (void)trans_cmd_uart_send_text("\r\n");
+}
+
+static char *trans_cmd_find_cmd_anchor(char *text)
+{
+    char *p;
+
+    if (!text || !text[0]) {
+        return text;
+    }
+    if (!strncmp(text, "CMD:", 4) || text[0] == '{') {
+        return text;
+    }
+
+    p = strstr(text, "CMD:");
+    if (p) {
+        return p;
+    }
+    p = strstr(text, "{\"cmd\"");
+    if (p) {
+        return p;
+    }
+    p = strstr(text, "{\\\"cmd\\\"");
+    if (p) {
+        return p;
+    }
+    p = strchr(text, '{');
+    if (p) {
+        return p;
+    }
+    return text;
+}
+
+static void trans_cmd_unescape_simple_json(char *text)
+{
+    char *src;
+    char *dst;
+
+    if (!text || text[0] != '{' || !strstr(text, "\\\"")) {
+        return;
+    }
+
+    src = text;
+    dst = text;
+    while (*src) {
+        if (src[0] == '\\' && src[1] == '\"') {
+            src++;
+        }
+        *dst++ = *src++;
+    }
+    *dst = '\0';
+}
+
+static const char *trans_cmd_find_uuid_fallback_anchor(char *text)
+{
+    char *p;
+
+    if (!text || !text[0]) {
+        return NULL;
+    }
+    if (!strncmp(text, "CMD:UUID=", 9) || !strncmp(text, "CMD:UUID?", 9) || text[0] == '{') {
+        return text;
+    }
+
+    p = strstr(text, "CMD:UUID=");
+    if (p) {
+        return p;
+    }
+    p = strstr(text, "CMD:UUID?");
+    if (p) {
+        return p;
+    }
+    p = strstr(text, "{\"cmd\"");
+    if (p && strstr(p, "setUuid")) {
+        return p;
+    }
+    p = strstr(text, "{\\\"cmd\\\"");
+    if (p && strstr(p, "setUuid")) {
+        return p;
+    }
+    p = strchr(text, '{');
+    if (p && strstr(p, "setUuid")) {
+        return p;
+    }
+    return NULL;
+}
+
+static uint8_t trans_cmd_line_contains_token(const uint8_t *line, uint16_t len, const char *token)
+{
+    uint16_t token_len;
+    uint16_t i;
+
+    if (!line || !len || !token || !token[0]) {
+        return 0;
+    }
+    token_len = (uint16_t)strlen(token);
+    if (!token_len || token_len > len) {
+        return 0;
+    }
+    for (i = 0; i + token_len <= len; i++) {
+        if (!memcmp(line + i, token, token_len)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int trans_cmd_try_uuid_fallback(const uint8_t *line, uint16_t len)
+{
+    char local[256];
+    uint16_t copy_len;
+    char *text;
+    int text_len;
+
+    if (!line || !len) {
+        return -1;
+    }
+
+    copy_len = len;
+    if (copy_len >= sizeof(local)) {
+        copy_len = sizeof(local) - 1;
+    }
+    memcpy(local, line, copy_len);
+    local[copy_len] = '\0';
+
+    text = (char *)trans_cmd_skip_line_prefix(local);
+    if (!text || !text[0]) {
+        return -1;
+    }
+    text = (char *)trans_cmd_find_uuid_fallback_anchor(text);
+    if (!text || !text[0]) {
+        return -1;
+    }
+    text = (char *)trans_cmd_skip_line_prefix(text);
+    if (!text || !text[0]) {
+        return -1;
+    }
+
+    text_len = (int)strlen(text);
+    while (text_len > 0) {
+        uint8_t tail = (uint8_t)text[text_len - 1];
+        if (tail == ' ' || tail == '\t' || tail == '\r' || tail == '\n' || tail < 0x20 || tail == 0x7F) {
+            text[--text_len] = '\0';
+            continue;
+        }
+        break;
+    }
+
+    trans_cmd_unescape_simple_json(text);
+    if (!strncmp(text, "CMD:UUID=", 9)) {
+        trans_cmd_set_uuid_trace("FALLBACK_CMD_UUID");
+        return trans_cmd_handle_uuid_set(text);
+    }
+    if (text[0] == '{' && strstr(text, "\"setUuid\"")) {
+        trans_cmd_set_uuid_trace("FALLBACK_JSON_UUID");
+        if (!trans_cmd_json_cmd_match(text, "setUuid")) {
+            return trans_cmd_handle_json_set_uuid(text);
+        }
+    }
+    return -1;
+}
+
+static const char *trans_cmd_prepare_line(const uint8_t *line, uint16_t len)
+{
+    uint16_t copy_len;
+    char *text;
+    int text_len;
+
+    if (!line || !len) {
+        return NULL;
+    }
+
+    copy_len = len;
+    if (copy_len >= sizeof(trans_cmd_line_scratch)) {
+        copy_len = sizeof(trans_cmd_line_scratch) - 1;
+    }
+    memcpy(trans_cmd_line_scratch, line, copy_len);
+    trans_cmd_line_scratch[copy_len] = '\0';
+
+    text = (char *)trans_cmd_skip_line_prefix(trans_cmd_line_scratch);
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    text = trans_cmd_find_cmd_anchor(text);
+    text = (char *)trans_cmd_skip_line_prefix(text);
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    text_len = (int)strlen(text);
+    while (text_len > 0) {
+        uint8_t tail = (uint8_t)text[text_len - 1];
+        if (tail == ' ' || tail == '\t' || tail == '\r' || tail == '\n' || tail < 0x20 || tail == 0x7F) {
+            text[--text_len] = '\0';
+            continue;
+        }
+        break;
+    }
+
+    trans_cmd_unescape_simple_json(text);
+    return text;
+}
+
 static int trans_cmd_send_dec_u16(uint16_t value)
 {
     char buf[5];
@@ -345,21 +563,48 @@ static uint8_t trans_cmd_key_equal(const char *lhs, const char *rhs)
 static const char *trans_cmd_skip_line_prefix(const char *text)
 {
     const uint8_t *p = (const uint8_t *)text;
+    uint8_t skip_more = 1;
 
     if (!p) {
         return NULL;
     }
 
-    while (*p == ' ' || *p == '\t') {
-        p++;
-    }
+    while (skip_more) {
+        skip_more = 0;
 
-    if (p[0] == 0xEF && p[1] == 0xBB && p[2] == 0xBF) {
-        p += 3;
-    }
+        while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') {
+            p++;
+            skip_more = 1;
+        }
 
-    while (*p == ' ' || *p == '\t') {
-        p++;
+        /* UTF-8 BOM */
+        if (p[0] == 0xEF && p[1] == 0xBB && p[2] == 0xBF) {
+            p += 3;
+            skip_more = 1;
+            continue;
+        }
+
+        /* Zero-width space / ZWNJ / ZWJ */
+        if (p[0] == 0xE2 && p[1] == 0x80 &&
+            (p[2] == 0x8B || p[2] == 0x8C || p[2] == 0x8D)) {
+            p += 3;
+            skip_more = 1;
+            continue;
+        }
+
+        /* Non-breaking space */
+        if (p[0] == 0xC2 && p[1] == 0xA0) {
+            p += 2;
+            skip_more = 1;
+            continue;
+        }
+
+        /* Full-width space */
+        if (p[0] == 0xE3 && p[1] == 0x80 && p[2] == 0x80) {
+            p += 3;
+            skip_more = 1;
+            continue;
+        }
     }
     return (const char *)p;
 }
@@ -500,29 +745,13 @@ static int trans_cmd_json_parse_string_field(const char *json, const char *key, 
     return 0;
 }
 
-static uint8_t trans_cmd_json_cmd_is(const char *json, const char *expect)
-{
-    char cmd_text[24];
-
-    if (!json || !expect) {
-        return 0;
-    }
-    if (trans_cmd_json_parse_string_field(json, "cmd", cmd_text, sizeof(cmd_text))) {
-        return 0;
-    }
-    return strcmp(cmd_text, expect) == 0 ? 1 : 0;
-}
-
-static int trans_cmd_json_parse_set_params(const char *json, trans_cmd_set_params_t *out)
+static int trans_cmd_json_cmd_match(const char *json, const char *expect)
 {
     const char *p;
-    const char *expect = "setParams";
 
-    if (!json || !out) {
+    if (!json || !expect) {
         return -1;
     }
-    memset(out, 0, sizeof(*out));
-
     p = trans_cmd_json_find_field_value(json, "cmd");
     if (!p || *p != '\"') {
         return -1;
@@ -533,6 +762,19 @@ static int trans_cmd_json_parse_set_params(const char *json, trans_cmd_set_param
         expect++;
     }
     if (*expect || *p != '\"') {
+        return -2;
+    }
+    return 0;
+}
+
+static int trans_cmd_json_parse_set_params(const char *json, trans_cmd_set_params_t *out)
+{
+    if (!json || !out) {
+        return -1;
+    }
+    memset(out, 0, sizeof(*out));
+
+    if (trans_cmd_json_cmd_match(json, "setParams")) {
         return -2;
     }
     if (!trans_cmd_json_parse_u16_dec_field(json, "schoolId", &out->school_id)) {
@@ -557,7 +799,7 @@ static int trans_cmd_json_parse_set_uuid(const char *json, trans_cmd_set_uuid_t 
     }
     memset(out, 0, sizeof(*out));
 
-    if (!trans_cmd_json_cmd_is(json, "setUuid")) {
+    if (trans_cmd_json_cmd_match(json, "setUuid")) {
         return -2;
     }
     if (trans_cmd_json_parse_string_field(json, "uuid", uuid_hex, sizeof(uuid_hex))) {
@@ -1488,23 +1730,30 @@ static int trans_cmd_handle_json_set_uuid(const char *line)
     uint8_t ready = 0;
     int ret;
 
+    trans_cmd_set_uuid_trace("HANDLER_ENTER");
     ret = trans_cmd_json_parse_set_uuid(line, &cfg);
     if (ret == -2) {
+        trans_cmd_set_uuid_trace("PARSE_CMD_MISMATCH");
         return -1;
     }
     if (ret == -3) {
+        trans_cmd_set_uuid_trace("PARSE_UUID_FORMAT");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_FORMAT", NULL, 0, 0, 0, 0, 0, 0);
     }
     if (ret) {
+        trans_cmd_set_uuid_trace("PARSE_PARAM_FAIL");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_PARAM", NULL, 0, 0, 0, 0, 0, 0);
     }
+    trans_cmd_set_uuid_trace("PARSE_OK");
 
     ret = trans_uuid_info_get(NULL, NULL, NULL, &tx_power, NULL, NULL,
                               &school_id, &device_id, NULL, &ready);
     if (ret == -4) {
+        trans_cmd_set_uuid_trace("GET_ADV_NOT_SUPPORTED");
         return trans_cmd_json_send_set_uuid_result(1, "ADV_NOT_SUPPORTED", NULL, 0, 0, 0, 0, 0, 0);
     }
     if (ret) {
+        trans_cmd_set_uuid_trace("GET_CFG_FAIL");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_PARAM", NULL, 0, 0, 0, 0, 0, 0);
     }
 
@@ -1518,21 +1767,27 @@ static int trans_cmd_handle_json_set_uuid(const char *line)
         cfg.device_id = device_id;
     }
 
+    trans_cmd_set_uuid_trace("WRITE_BEGIN");
     ret = trans_uuid_info_set(cfg.uuid, cfg.major, cfg.minor, cfg.tx_power,
                               TRANS_UUID_PROFILE_PAIR, 0, cfg.school_id, cfg.device_id);
     if (ret == -2) {
+        trans_cmd_set_uuid_trace("WRITE_LOCKED");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_LOCKED", NULL, 0, 0, 0, 0, 0, 0);
     }
     if (ret == -4) {
+        trans_cmd_set_uuid_trace("WRITE_ADV_NOT_SUPPORTED");
         return trans_cmd_json_send_set_uuid_result(1, "ADV_NOT_SUPPORTED", NULL, 0, 0, 0, 0, 0, 0);
     }
     if (ret == -3) {
+        trans_cmd_set_uuid_trace("WRITE_SAVE_FAIL");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_SAVE", NULL, 0, 0, 0, 0, 0, 0);
     }
     if (ret) {
+        trans_cmd_set_uuid_trace("WRITE_FAIL");
         return trans_cmd_json_send_set_uuid_result(1, "UUID_PARAM", NULL, 0, 0, 0, 0, 0, 0);
     }
 
+    trans_cmd_set_uuid_trace("WRITE_OK");
     return trans_cmd_json_send_set_uuid_result(0, NULL, cfg.uuid, cfg.major, cfg.minor,
                                                cfg.tx_power, cfg.school_id, cfg.device_id, 1);
 }
@@ -1628,8 +1883,7 @@ static int trans_cmd_handle_json_set_params(const char *line)
 
 static int trans_cmd_proc_handle_line(const uint8_t *line, uint16_t len)
 {
-    const char *text = trans_cmd_skip_line_prefix((const char *)line);
-    char json_cmd[24];
+    const char *text = trans_cmd_prepare_line(line, len);
 
     if (!line || !len || !text || !text[0]) {
         return -1;
@@ -1683,15 +1937,27 @@ static int trans_cmd_proc_handle_line(const uint8_t *line, uint16_t len)
         return trans_cmd_handle_scan_filter_set(text + 16);
     }
     if (text[0] == '{') {
-        if (!trans_cmd_json_parse_string_field(text, "cmd", json_cmd, sizeof(json_cmd))) {
-            if (!strcmp(json_cmd, "setUuid")) {
-                return trans_cmd_handle_json_set_uuid(text);
-            }
-            if (!strcmp(json_cmd, "setParams")) {
-                return trans_cmd_handle_json_set_params(text);
+        if (strstr(text, "\"setUuid\"") || strstr(text, "\\\"setUuid\\\"")) {
+            trans_cmd_set_uuid_trace("JSON_SEEN");
+            if (strstr(text, "\\\"cmd\\\"")) {
+                trans_cmd_set_uuid_trace("ESCAPED_INPUT");
             }
         }
+        if (!trans_cmd_json_cmd_match(text, "setUuid")) {
+            trans_cmd_set_uuid_trace("DISPATCH_HIT");
+            return trans_cmd_handle_json_set_uuid(text);
+        }
+        if (strstr(text, "\"setUuid\"") || strstr(text, "\\\"setUuid\\\"")) {
+            trans_cmd_set_uuid_trace("DISPATCH_MISS");
+        }
+        if (!trans_cmd_json_cmd_match(text, "setParams")) {
+            return trans_cmd_handle_json_set_params(text);
+        }
         return -1;
+    }
+    if (len && (trans_cmd_line_contains_token(line, len, "CMD:UUID=") ||
+                trans_cmd_line_contains_token(line, len, "setUuid"))) {
+        return trans_cmd_try_uuid_fallback(line, len);
     }
     return -1;
 }
@@ -1704,6 +1970,7 @@ void trans_cmd_proc_init(void)
 
     trans_cmd_uart_register_line_handler(trans_cmd_proc_handle_line);
     trans_cmd_proc_inited = 1;
+    (void)trans_cmd_uart_send_text(TRANS_CMD_SET_UUID_TRACE_BANNER);
     log_info("proc ready: mode/uuid/badge/lock/setParams/setUuid/scanFilter");
 }
 

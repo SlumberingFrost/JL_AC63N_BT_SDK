@@ -1328,24 +1328,15 @@ static int trans_adv_apply_now(void)
 #endif
 }
 
-static int trans_broadcast_stop_now(void)
-{
-#if !CONFIG_BT_GATT_SERVER_NUM
-    return -1;
-#else
-    trans_server_adv_config.adv_auto_do = 0;
-    ble_gatt_server_set_adv_config(&trans_server_adv_config);
-    ble_gatt_server_adv_enable(0);
-    return 0;
-#endif
-}
-
 static void trans_set_params_stop_adv_timeout(void *priv)
 {
     (void)priv;
 
     trans_set_params_stop_adv_timer = 0;
-    (void)trans_broadcast_stop_now();
+    /*
+     * 当前产品口径调整为：超时后仅上报 stopBroadcast 给主控，
+     * 真正的停播/关蓝牙动作由外部主控自行决策。
+     */
     (void)trans_cmd_uart_send_text("{\"cmd\":\"stopBroadcast\"}\r\n");
 }
 

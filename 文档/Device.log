@@ -1,63 +1,242 @@
 
-[11:52:50.179]IN←◆
-[00:00:00.100]get_chip_id:   ffff
-[00:00:00.103]get_vbat_trim: 6
-[00:00:00.106]get_vbg_trim:  14
-[00:00:00.110][0-MSYS]--Reset Source : 0x1
-[00:00:00.114]P11 SYS RESET
-[00:00:00.116][1-P11]--Reset Source : 0x4
-[00:00:00.116]P33 SYS RESET
-[00:00:00.124][2-P33]--Reset Source : 0x2
-[00:00:00.128]VDDIO LVD
-[11:52:50.224]IN←◆
-[00:00:00.132][Info]: [SDFILE]VM size: 0x1f000 @ 0x1f000
+[16:44:37.205]IN←◆{"cmd":"scanResult","data":[]}
 
-FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
-FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
-FF FF FF FF FF FF FF FF FF FF FF FF 
-[00:00:00.142][Info]: [SDFILE]disk capacity 512 KB
-[00:00:00.147]last file_addr:1ddd2 1020
-[00:00:00.151]end_addr:1f000
+[16:44:38.224]IN←◆{"cmd":"scanResult","data":[]}
 
-49 53 44 55 04 02 59 FF 10 43 6A B2 D7 69 FF FF 
-[00:00:00.159][Debug]: [SDFILE]sdfile mount succ
+[16:44:39.209]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:50.250]IN←◆[00:00:00.183]trim: 0, wvdd_lev: 4
-[00:00:00.187]trim: 0, pvdd_lev: 10, pvdd_lev_l: 4
+[16:44:40.212]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:50.314]IN←◆[00:00:00.249][Info]: [USER_CFG]bt name config:AC6323A
+[16:44:41.215]IN←◆{"cmd":"scanResult","data":[]}
 
-[00:00:00.264]=================update_param_len:900
+[16:44:42.216]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:50.360]IN←◆[00:00:00.270][Info]: [COMM_BLE]ble mac:
+[16:44:43.219]IN←◆{"cmd":"scanResult","data":[]}
 
-9A 2E 95 BB EB 69 
-[00:00:00.276][SCAN-BOOT] bt_ble_before_start_init: enter
-[00:00:00.282][BLE_TRANS]bt_ble_before_start_init 
-[00:00:00.287][SCAN-BOOT] bt_ble_before_start_init: ble_comm_init done
-[00:00:00.295]le_support:2 1
-[00:00:00.298]le_config:1 1 0 0
+[16:44:44.220]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:50.422]IN←◆[00:00:00.355][Debug]: [LBUF]lbuf misalgin : 0x210664 / 0x826
-[00:00:00.363]att_send need_size >= 6+1+188
+[16:44:45.221]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:50.452]IN←◆[00:00:00.368][SCAN-BOOT] bt_ble_init: enter
-[00:00:00.373][SCAN-BOOT] bt_ble_init: trans_server_init begin
-[00:00:00.380][SCAN-BOOT] bt_ble_init: trans_server_init done
-[00:00:00.386][SCAN-BOOT] bt_ble_init: ble_module_enable(1) begin
-[00:00:00.396][SCAN-BOOT] bt_ble_init: ble_module_enable(1) done
+[16:44:46.225]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:52:54.028]OUT→◇{"cmd":"setUuid","uuid":"00112233445566778899AABBCCDDEEFF","major":4097,"minor":1,"tx":-59}
-□
-[11:52:54.041]IN←◆ERR:UNKNOWN_CMD
+[16:44:47.226]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:53:04.775]OUT→◇{"cmd":"setParams","deviceId":1,"schoolId":1}
-□
-[11:53:04.797]IN←◆{"cmd":"setParamsResult","retCode":0,"schoolId":1,"deviceId":1}
+[16:44:48.227]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:53:09.482]OUT→◇CMD:UUID?□
-[11:53:14.802]IN←◆{"cmd":"stopBroadcast"}
+[16:44:49.229]IN←◆{"cmd":"scanResult","data":[]}
 
-[11:53:17.815]OUT→◇CMD:UUID?
-□
-[11:53:17.837]IN←◆UUID:HEX=415733314E424C45555550A0FFBBEB69,MAJOR=EB69,MINOR=FFBB,TX=C5,PROFILE=PAIR,SCHOOLID=1,DEVICEID=1,LOCK=0
+[16:44:50.232]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:44:51.233]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:44:52.235]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:44:53.239]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:54.244]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:55.248]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:56.251]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:57.256]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:58.260]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:44:59.264]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:45:00.268]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:45:01.272]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:45:02.276]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":1}]}
+
+[16:45:04.280]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:05.282]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:06.284]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:07.286]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:08.288]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:09.289]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:10.294]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:11.298]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:12.303]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:13.307]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:14.310]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:15.314]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:16.319]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:17.323]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:18.327]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:19.330]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:20.334]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:21.339]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:22.343]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:23.347]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:45:25.353]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:26.353]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:27.356]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:28.356]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:29.358]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:30.360]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:31.361]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:45:32.364]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:46:44.511]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:46:45.514]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:46.518]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:47.522]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:48.526]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:49.530]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:50.534]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:51.538]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:52.542]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:53.546]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:54.552]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:55.556]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:56.561]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:46:58.566]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:46:59.567]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:00.574]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:01.571]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:02.574]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:03.575]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:04.577]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:05.580]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:06.582]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:07.584]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:08.585]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:09.588]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:10.590]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:11.592]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:12.594]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:13.596]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:14.598]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:15.599]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:16.601]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:17.603]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:18.606]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:19.608]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:20.609]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:21.612]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:22.614]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:23.616]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:24.618]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:25.620]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:26.622]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:27.624]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:28.626]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:29.628]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:30.630]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:31.631]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:32.634]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:33.636]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:34.638]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:35.640]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:36.643]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:37.644]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:38.646]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:39.651]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:40.654]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:41.660]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:42.665]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:43.669]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:44.673]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:45.677]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:46.681]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:47.685]IN←◆{"cmd":"scanResult","data":[{"schoolId":2,"deviceId":321}]}
+
+[16:47:49.688]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:51.692]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:52.693]IN←◆{"cmd":"scanResult","data":[]}
+
+[16:47:53.696]IN←◆{"cmd":"scanResult","data":[]}
