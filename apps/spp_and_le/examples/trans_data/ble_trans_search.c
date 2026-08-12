@@ -522,6 +522,7 @@ static void trans_scan_health_check(void)
 static void trans_scan_health_timer_cb(void *priv)
 {
     (void)priv;
+    trans_scan_led_keepalive();
     trans_scan_health_check();
 }
 
@@ -688,6 +689,7 @@ static void trans_scan_list_timer_cb(void *priv)
     uint32_t now_tick;
 
     (void)priv;
+    trans_scan_led_keepalive();
     now_tick = trans_scan_now_tick();
     trans_scan_merge_flush_timeout(now_tick);
     trans_scan_list_send_frame();

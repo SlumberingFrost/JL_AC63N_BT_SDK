@@ -61,6 +61,7 @@ uint8_t trans_uuid_is_ready(void);
 uint8_t trans_uuid_is_locked(void);
 int trans_scan_filter_get(uint16_t *school_id, uint16_t *device_id, uint8_t *enable);
 int trans_scan_filter_set(uint16_t school_id, uint16_t device_id, uint8_t enable);
+void trans_scan_led_keepalive(void);
 int trans_broadcast_restart_now(void);
 void trans_set_params_stop_broadcast_timer_restart(void);
 void trans_set_params_stop_broadcast_timer_cancel(void);

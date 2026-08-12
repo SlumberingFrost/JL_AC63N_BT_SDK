@@ -154,16 +154,22 @@ static int trans_set_params_stop_adv_timer;
 #ifndef TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS
 #define TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS            5000
 #endif
+#ifndef TCFG_AC6323A_SCAN_LED_TICK_MS
+#define TCFG_AC6323A_SCAN_LED_TICK_MS                100
+#endif
 
 #if TCFG_AC6323A_SCAN_LED_ENABLE && TCFG_AC6323A_PRODUCT_MODE_IS_SCAN && (TCFG_AC6323A_SCAN_LED_PIN != NO_CONFIG_PORT)
 #define TRANS_SCAN_LED_LEVEL_ON  (TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL ? 1 : 0)
 #define TRANS_SCAN_LED_LEVEL_OFF (TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL ? 0 : 1)
 
-static int trans_scan_led_phase_timer_id;
+static int trans_scan_led_timer_id;
 static uint8_t trans_scan_led_phase_on;
 static uint8_t trans_scan_led_started;
+static uint8_t trans_scan_led_want_run;
+static uint32_t trans_scan_led_phase_start_tick;
+static uint32_t trans_scan_led_phase_hold_ms;
 
-static void trans_scan_led_timeout(void *priv);
+static void trans_scan_led_tick(void *priv);
 
 static void trans_scan_led_log_sparse_phase(uint8_t led_on, uint32_t hold_ms)
 {
@@ -191,35 +197,68 @@ static void trans_scan_led_gpio_init(void)
     gpio_direction_output(TCFG_AC6323A_SCAN_LED_PIN, TRANS_SCAN_LED_LEVEL_OFF);
 }
 
-static void trans_scan_led_phase_timer_stop(void)
+static uint32_t trans_scan_led_default_hold_ms(uint8_t led_on)
 {
-    if (trans_scan_led_phase_timer_id) {
-        sys_timeout_del(trans_scan_led_phase_timer_id);
-        trans_scan_led_phase_timer_id = 0;
+    return led_on ? TCFG_AC6323A_SCAN_LED_WAIT_ON_MS : TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS;
+}
+
+static void trans_scan_led_phase_set(uint8_t led_on, uint32_t hold_ms)
+{
+    trans_scan_led_phase_on = led_on ? 1 : 0;
+    trans_scan_led_phase_hold_ms = hold_ms;
+    trans_scan_led_phase_start_tick = (uint32_t)jiffies;
+    trans_scan_led_apply(led_on);
+    trans_scan_led_log_sparse_phase(trans_scan_led_phase_on, trans_scan_led_phase_hold_ms);
+}
+
+static uint8_t trans_scan_led_phase_expired(uint32_t now_tick)
+{
+    uint32_t expire_tick = trans_scan_led_phase_start_tick + msecs_to_jiffies(trans_scan_led_phase_hold_ms);
+
+    if (now_tick == expire_tick) {
+        return 1;
+    }
+    return time_after(now_tick, expire_tick) ? 1 : 0;
+}
+
+static int trans_scan_led_timer_start(void)
+{
+    if (trans_scan_led_timer_id) {
+        return 0;
+    }
+
+    trans_scan_led_timer_id = sys_timer_add(NULL, trans_scan_led_tick, TCFG_AC6323A_SCAN_LED_TICK_MS);
+    return trans_scan_led_timer_id ? 0 : -1;
+}
+
+static void trans_scan_led_timer_stop(void)
+{
+    if (trans_scan_led_timer_id) {
+        sys_timer_del(trans_scan_led_timer_id);
+        trans_scan_led_timer_id = 0;
     }
 }
 
-static void trans_scan_led_phase_schedule(uint8_t led_on)
+static void trans_scan_led_tick(void *priv)
 {
-    uint32_t hold_ms = led_on ? TCFG_AC6323A_SCAN_LED_WAIT_ON_MS : TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS;
+    uint32_t now_tick;
 
-    trans_scan_led_phase_timer_stop();
-    trans_scan_led_phase_on = led_on ? 1 : 0;
-    trans_scan_led_apply(led_on);
-    trans_scan_led_log_sparse_phase(led_on, hold_ms);
-    trans_scan_led_phase_timer_id = sys_timeout_add(NULL, trans_scan_led_timeout, hold_ms);
-}
-
-static void trans_scan_led_timeout(void *priv)
-{
     (void)priv;
-    trans_scan_led_phase_timer_id = 0;
-    trans_scan_led_phase_schedule(trans_scan_led_phase_on ? 0 : 1);
+    if (!trans_scan_led_want_run) {
+        return;
+    }
+
+    now_tick = (uint32_t)jiffies;
+    if (trans_scan_led_phase_expired(now_tick)) {
+        uint8_t next_on = trans_scan_led_phase_on ? 0 : 1;
+        trans_scan_led_phase_set(next_on, trans_scan_led_default_hold_ms(next_on));
+    }
 }
 
 static void trans_scan_led_stop_internal(void)
 {
-    trans_scan_led_phase_timer_stop();
+    trans_scan_led_want_run = 0;
+    trans_scan_led_timer_stop();
     trans_scan_led_apply(0);
     trans_scan_led_started = 0;
 }
@@ -227,20 +266,29 @@ static void trans_scan_led_stop_internal(void)
 static void trans_scan_led_start_internal(void)
 {
     if (trans_scan_led_started) {
+        trans_scan_led_want_run = 1;
+        (void)trans_scan_led_timer_start();
         return;
     }
 
     trans_scan_led_gpio_init();
     trans_scan_led_started = 1;
+    trans_scan_led_want_run = 1;
+
     if (TCFG_AC6323A_SCAN_LED_INIT_ON_MS) {
-        trans_scan_led_phase_timer_stop();
-        trans_scan_led_phase_on = 0;
-        trans_scan_led_apply(1);
-        trans_scan_led_phase_timer_id = sys_timeout_add(NULL, trans_scan_led_timeout,
-                                                        TCFG_AC6323A_SCAN_LED_INIT_ON_MS);
+        trans_scan_led_phase_set(1, TCFG_AC6323A_SCAN_LED_INIT_ON_MS);
     } else {
-        trans_scan_led_phase_schedule(1);
+        trans_scan_led_phase_set(0, TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS);
     }
+    (void)trans_scan_led_timer_start();
+}
+
+void trans_scan_led_keepalive(void)
+{
+    if (!trans_scan_led_want_run) {
+        return;
+    }
+    (void)trans_scan_led_timer_start();
 }
 #else
 static void trans_scan_led_start_internal(void)
@@ -248,6 +296,10 @@ static void trans_scan_led_start_internal(void)
 }
 
 static void trans_scan_led_stop_internal(void)
+{
+}
+
+void trans_scan_led_keepalive(void)
 {
 }
 

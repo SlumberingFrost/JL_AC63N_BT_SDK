@@ -29,7 +29,7 @@
 
 // 通过宏定义切换模式
 #ifndef TCFG_AC6323A_PRODUCT_MODE
-#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_SCAN
+#define TCFG_AC6323A_PRODUCT_MODE                TCFG_AC6323A_PRODUCT_MODE_ADV
 #endif
 
 #if TCFG_AC6323A_PRODUCT_MODE == TCFG_AC6323A_PRODUCT_MODE_SCAN
@@ -41,8 +41,8 @@
 #endif
 
 // AC6323A 普通扫描模式统一复用 PA9 做单灯指示：
-// 1. 开机亮 1s
-// 2. 随后进入亮500ms/灭5000ms稀疏闪烁
+// 1. 开机后直接进入稀疏闪烁
+// 2. 默认先灭5000ms，再亮500ms，周期timer异常时由扫描周期keepalive恢复
 #if TCFG_AC6323A_PRODUCT_MODE_IS_SCAN
 #define TCFG_AC6323A_SCAN_LED_ENABLE            ENABLE_THIS_MOUDLE
 #else
@@ -50,9 +50,10 @@
 #endif
 #define TCFG_AC6323A_SCAN_LED_PIN               IO_PORTA_09
 #define TCFG_AC6323A_SCAN_LED_ACTIVE_LEVEL      1
-#define TCFG_AC6323A_SCAN_LED_INIT_ON_MS        1000
+#define TCFG_AC6323A_SCAN_LED_INIT_ON_MS        0
 #define TCFG_AC6323A_SCAN_LED_WAIT_ON_MS        500
 #define TCFG_AC6323A_SCAN_LED_WAIT_OFF_MS       5000
+#define TCFG_AC6323A_SCAN_LED_TICK_MS           100
 
 //*********************************************************************************//
 //                                 UART配置                                        //
