@@ -39,7 +39,9 @@
 
 #if (RCSP_BTMATE_EN)
 
+#if !CONFIG_AC6323A_LOG_MINIMAL
 #define RCSP_DEBUG_EN
+#endif
 #ifdef RCSP_DEBUG_EN
 #define rcsp_putchar(x)                putchar(x)
 #define rcsp_printf                    printf
@@ -1532,4 +1534,3 @@ static int JL_rcsp_event_handler(RCSP_MSG msg, int argc, int *argv)
     return ret;
 }
 #endif
-

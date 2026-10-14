@@ -1,0 +1,325 @@
+AC6323A/AW6323A 主控侧 JSON 适配说明
+
+适用范围：
+1. 适用于当前 SDK 的 TCFG_AC6323A_PRODUCT_MODE_SCAN 和 TCFG_AC6323A_PRODUCT_MODE_ADV 两个模式。
+2. 只描述主控侧需要通过 UART0 处理的 JSON 内容。
+3. OTA 固件数据不走 UART0，UART0 只负责触发 OTA 模式、下发业务参数、接收状态 JSON。
+
+
+一、主控侧总规则
+
+1. UART 参数仍按当前业务口径使用：
+   115200 8N1，命令以 \r\n 结束。
+
+2. 主控侧只需要解析 JSON 对象：
+   - 蓝牙芯片串口可能仍会输出少量非 JSON 调试文本。
+   - 上位机日志工具可能会把调试前缀和 JSON 拼在同一行。
+   - 主控侧不要用“整行必须等于 JSON”的方式判断。
+   - 建议从串口流中提取每个以 { 开始、以匹配 } 结束的 JSON 对象，再按 cmd 字段分发。
+
+3. 一行中可能出现多个 JSON 对象：
+   例如日志工具聚合后可能显示：
+   NEWINGS[...] {"cmd":"scanResult","data":{}}{"tag":"LED_SPARSE","phase":"ON","holdMs":500}
+   主控侧应至少提取并处理自己关心的 cmd，其余未知 cmd 可以忽略。
+
+4. 当前最新版本中，旧的 TRACE:OTA:BUILD=20260814_A 不再作为主控接口。
+   主控侧应改为解析启动后的 bootInfo JSON：
+   {"cmd":"bootInfo","retCode":0,"build":"20260814_A"}
+
+5. retCode 规则：
+   - retCode=0 表示命令执行成功。
+   - retCode=1 表示命令执行失败或状态未变化，具体原因看 code/status 字段。
+
+
+二、两个模式通用的 JSON
+
+1. 启动版本上报
+
+   蓝牙上电或 OTA 重启后会主动输出：
+   {"cmd":"bootInfo","retCode":0,"build":"20260814_A"}
+
+   主控侧用途：
+   - 记录当前蓝牙固件 build。
+   - 判断 OTA 后是否进入目标版本。
+   - 替代旧的 TRACE:OTA:BUILD=... 文本解析。
+
+
+2. 蓝牙名称规则
+
+   主控不再下发 SN/name 作为常规蓝牙名称。
+
+   主控侧注意：
+   - 不要再发送 setBtName 配置蓝牙名称。
+   - 如果旧主控仍发送 setBtName，蓝牙会回：
+     {"cmd":"setBtNameResult","retCode":1,"code":"DISABLED"}
+   - 正常业务阶段蓝牙使用 SDK 默认名称。
+   - 进入 OTA 模式成功后，蓝牙会自动把名称临时改为 NW_<deviceId>。
+   - 例如最近一次 setParams 写入 deviceId=1，则 OTA 模式名称为 NW_1。
+
+
+3. 业务参数配置
+
+   主控发送：
+   {"cmd":"setParams","deviceId":1,"schoolId":1}\r\n
+
+   蓝牙成功回包：
+   {"cmd":"setParamsResult","retCode":0,"deviceId":1,"schoolId":1}
+
+   蓝牙失败回包示例：
+   {"cmd":"setParamsResult","retCode":1,"code":"SCHOOL_PARAM"}
+   {"cmd":"setParamsResult","retCode":1,"code":"DEVICE_PARAM"}
+   {"cmd":"setParamsResult","retCode":1,"code":"SAVE_FAIL"}
+
+   主控侧注意：
+   - schoolId/deviceId 会作为业务参数写入芯片 VM，掉电保持。
+   - 蓝牙名称不由 setParams 写入；进入 OTA 模式成功后会自动切换为 NW_<deviceId>。
+
+
+4. 进入 OTA 维护模式
+
+   主控发送：
+   {"cmd":"enterOta"}\r\n
+
+   蓝牙成功回包：
+   {"cmd":"enterOta"}
+   {"cmd":"enterOtaResult","retCode":0,"enable":1}
+
+   蓝牙失败回包示例：
+   {"cmd":"enterOtaResult","retCode":1,"code":"OTA_MARK_SAVE"}
+   {"cmd":"enterOtaResult","retCode":1,"code":"OTA_NOT_ENABLED"}
+   {"cmd":"enterOtaResult","retCode":1,"code":"GATT_SERVER_NOT_ENABLED"}
+   {"cmd":"enterOtaResult","retCode":1,"code":"ADV_FAIL"}
+   {"cmd":"enterOtaResult","retCode":1,"code":"OTA_NAME_FAIL"}
+   {"cmd":"enterOtaResult","retCode":1,"code":"FAIL"}
+
+   主控侧用途：
+   - 在 scan-only 模式下，触发蓝牙停止扫描业务并打开可连接 OTA 广播。
+   - 在 adv-only 模式下，也可以作为统一 OTA 入口使用。
+   - 主控只负责触发 OTA 模式；真正升级包传输由手机通过 BLE RCSP OTA 完成。
+
+
+5. OTA 结果上报
+
+   OTA 成功后，蓝牙重启进入新固件，并在启动阶段输出一次：
+   {"cmd":"otaResult","retCode":0,"status":"success","build":"20260814_B","from":"20260814_A"}
+
+   如果进入 OTA 前后 build 没有变化，会输出：
+   {"cmd":"otaResult","retCode":1,"status":"notChanged","build":"20260814_A","from":"20260814_A"}
+
+   主控侧用途：
+   - retCode=0/status=success：可认为 OTA 已切换到新 build。
+   - retCode=1/status=notChanged：通常表示选择了相同升级包，或升级后 build 未变化。
+   - otaResult 是一次性上报，输出后会清除芯片内的 OTA pending 标记。
+   - 如果设备运行的是旧固件，或升级前没有成功写入 pending 标记，OTA 后可能只有 bootInfo，没有 otaResult；此时主控可用 bootInfo 的 build 是否变化做辅助判断。
+
+
+三、scan-only 模式主控适配
+
+1. 模式定位
+
+   scan-only 固件启动后默认做扫描业务，不主动作为 OTA 外设广播。
+   当前 scan-only 已编入 OTA 需要的 GATT server，但只有收到 enterOta 后才切换到 OTA 维护广播。
+
+
+2. 蓝牙名称
+
+   主控不需要配置蓝牙名称。
+
+   主控侧注意：
+   - scan-only 正常扫描业务使用 SDK 默认名称。
+   - scan-only 进入 OTA 模式成功后，OTA 维护广播名称自动切到 NW_<deviceId>。
+   - deviceId 来自最近一次 setParams 保存的扫描过滤参数。
+
+
+3. 配置扫描过滤参数
+
+   主控发送：
+   {"cmd":"setParams","deviceId":1,"schoolId":1}\r\n
+
+   蓝牙成功回包：
+   {"cmd":"setParamsResult","retCode":0,"deviceId":1,"schoolId":1}
+
+   主控侧注意：
+   - scan-only 模式下，setParams 只写入扫描过滤参数。
+   - 当前扫描过滤实际只按 schoolId 拦截。
+   - deviceId 会保存、回读、上报，但不会单独过滤掉不同 deviceId。
+
+
+4. 扫描结果上报
+
+   空结果：
+   {"cmd":"scanResult","data":{}}
+
+   命中一个设备：
+   {"cmd":"scanResult","data":{"schoolId":1,"deviceId":[2]}}
+
+   同一上报周期命中多个设备：
+   {"cmd":"scanResult","data":{"schoolId":1,"deviceId":[2,3,4]}}
+
+   当前扫描轮次上报完成：
+   {"cmd":"scanResultDone","schoolId":1,"count":3}
+
+   主控侧注意：
+   - scanResult 是上报格式，当前仍保留 schoolId/deviceId 字段名。
+   - data 为空对象时表示当前周期无命中结果。
+   - deviceId 是数组，不是单个整数。
+   - 当前扫描模式按 500ms 扫一轮；一轮结束后停止扫描，先把本轮 scanResult 通过串口上报完，再延迟约 1s 上报 scanResultDone/count，之后才开始下一轮。
+   - 当前一次 scanResult 最多合并 8 个 deviceId。
+   - 一轮结果全部发完后，延迟约 1s 输出 scanResultDone，count 表示本轮命中数量。
+   - 若一轮命中数量超过单条 scanResult 可容纳数量，多条 scanResult 之间间隔约 1s 输出。
+   - 当前 scanResult 发送缓存为 384 字节。
+   - 如果对端广播只有 schoolId、没有 deviceId，数组元素可能为 -1。
+
+
+5. scan-only 模式 OTA 流程
+
+   推荐主控流程：
+   1. 等待 bootInfo，记录当前 build。
+   2. 发送 setParams，写入 schoolId、deviceId。
+   3. 正常业务阶段处理 scanResult/scanResultDone。
+   4. 需要升级时，发送 enterOta。
+   5. 收到 enterOta 和 enterOtaResult retCode=0 后，确认蓝牙 OTA 名称已切到 NW_<deviceId>，提示手机端连接该蓝牙并选择 update.ufw。
+   6. OTA 期间主控不要再依赖 scanResult。
+   7. 蓝牙升级完成后会断连并重启。
+   8. 主控等待新的 bootInfo，并优先读取 otaResult 判断升级结果。
+   9. 重启后蓝牙会回到 scan-only 正常扫描业务。
+
+
+四、adv-only 模式主控适配
+
+1. 模式定位
+
+   adv-only 固件启动后作为 BLE 外设广播。
+   当前 adv-only 保留 schoolId/deviceId 业务字段、蓝牙名称和 OTA 能力。
+   当前 adv-only 的 UUID/iBeacon/BADGE 业务功能已经关闭，主控侧不需要再下发或解析 UUID/BADGE 相关命令。
+
+
+2. 蓝牙名称
+
+   主控不需要配置蓝牙名称。
+
+   主控侧注意：
+   - adv-only 正常广播业务使用 SDK 默认名称。
+   - adv-only 进入 OTA 模式成功后，BLE 名称自动切到 NW_<deviceId>。
+   - deviceId 来自最近一次 setParams 保存的广播业务字段。
+
+
+3. 配置广播业务字段
+
+   主控发送：
+   {"cmd":"setParams","deviceId":1,"schoolId":1}\r\n
+
+   蓝牙成功回包：
+   {"cmd":"setParamsResult","retCode":0,"deviceId":1,"schoolId":1}
+
+   主控侧注意：
+   - adv-only 模式下，setParams 只设置广播内的 schoolId/deviceId。
+   - 写入成功后蓝牙会刷新广播数据。
+   - 手机或扫描端看到的 BLE 广播/扫描响应中会包含 Service Data 0xAF31 和 Complete Local Name。
+
+
+4. 停播事件
+
+   蓝牙可能上报：
+   {"cmd":"stopBroadcast"}
+
+   主控侧用途：
+   - 这是通知事件，不是蓝牙已经强制停播的确认。
+   - 当前产品口径是：蓝牙到时只上报 stopBroadcast，真正是否停播、关电或进入低功耗由外部主控决定。
+
+
+5. adv-only 模式 OTA 流程
+
+   推荐主控流程：
+   1. 等待 bootInfo，记录当前 build。
+   2. 发送 setParams，写入 schoolId、deviceId。
+   3. 需要升级时，发送 enterOta 作为统一 OTA 入口。
+   4. 收到 enterOta 和 enterOtaResult retCode=0 后，确认蓝牙 OTA 名称已切到 NW_<deviceId>，提示手机端连接该蓝牙并选择 update.ufw。
+   5. OTA 完成后蓝牙重启。
+   6. 主控等待新的 bootInfo，并优先读取 otaResult 判断升级结果。
+
+
+五、OTA 升级包和手机侧配合
+
+1. OTA 升级包路径：
+   D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\cpu\bd19\tools\download\data_trans\update.ufw
+
+2. Code::Blocks 工程当前已在 post-build 中设置 TRANS_DATA_GEN_UFW=1，正常工程编译后会同步生成 update.ufw。
+
+3. jl_isd.fw 是烧录包，不是手机 OTA 页面要选择的文件。
+
+4. update.ufw 是当前 BLE OTA 使用的全量升级包，不是差分包。
+
+5. 手机端需要使用杰理 OTA App 或集成杰理 Android/iOS OTA 外接库，通过 BLE RCSP 通道把 update.ufw 发送给蓝牙芯片。
+
+6. 主控与蓝牙之间的 UART0 不传输 update.ufw 内容。
+
+
+六、主控侧建议状态机
+
+1. 上电阶段
+   - 提取 JSON。
+   - 等待 bootInfo。
+   - 保存 build。
+
+2. 参数配置阶段
+   - scan-only：发送 setParams 配置 schoolId、deviceId。
+   - adv-only：发送 setParams 配置 schoolId、deviceId。
+   - 等待 setParamsResult，retCode=0 后再进入下一步。
+
+3. 正常业务阶段
+   - scan-only：处理 scanResult。
+   - adv-only：可处理 stopBroadcast。
+   - 对未知 cmd 保持忽略，不应导致主控协议状态机异常。
+
+4. OTA 阶段
+   - 发送 enterOta。
+   - 等待 enterOtaResult retCode=0；此时蓝牙名称已切到 NW_<deviceId>。
+   - 手机连接蓝牙并选择 update.ufw 升级。
+   - 主控等待蓝牙重启后的 bootInfo。
+   - 如果收到 otaResult retCode=0/status=success，则判定 OTA 成功。
+   - 如果只收到 bootInfo 且 build 已变化，可作为兼容旧固件的成功辅助判断。
+   - 如果 otaResult 为 notChanged，通常需要更换不同 build 的 update.ufw 后重试。
+
+
+七、主控侧需要废弃或降低优先级的旧逻辑
+
+1. 不要再解析 TRACE:OTA:BUILD=... 作为版本接口，改为解析 bootInfo。
+
+2. 不要再把 sn/name 塞进 setParams，也不要再发送 setBtName 写蓝牙名称。
+   OTA 模式名称由蓝牙根据当前 deviceId 自动生成。
+
+3. adv-only 当前不需要 UUID/iBeacon/BADGE：
+   - 不需要发送 setUuid。
+   - 不需要发送 CMD:UUID、CMD:BADGE 等旧文本命令。
+   - 不需要依赖 BADGE 作为广播业务字段。
+
+4. 不要把 enterOta 理解为“主控通过串口升级蓝牙”。
+   enterOta 只表示让蓝牙进入可被手机 BLE OTA 连接的维护状态。
+
+5. 不要把 stopBroadcast 理解为蓝牙已经物理关闭。
+   它只是蓝牙通知主控可以按产品策略处理广播窗口结束。
+
+
+八、最小验收清单
+
+1. 两个模式上电后，主控都能提取：
+   {"cmd":"bootInfo","retCode":0,"build":"..."}
+
+2. 两个模式下，主控发送：
+   {"cmd":"setParams","deviceId":1,"schoolId":1}
+
+3. 两个模式下，蓝牙都应返回：
+   {"cmd":"setParamsResult","retCode":0,"deviceId":1,"schoolId":1}
+
+4. scan-only 下，主控能处理：
+   {"cmd":"scanResult","data":{}}
+   {"cmd":"scanResult","data":{"schoolId":...,"deviceId":[...]}}
+
+5. adv-only 下，BLE 调试工具能看到 SDK 默认名称，扫描响应中存在 Service Data 0xAF31。
+
+6. 两个模式都能发送 enterOta，并收到：
+   {"cmd":"enterOtaResult","retCode":0,"enable":1}
+   此时 BLE 调试工具或手机端应能看到 OTA 名称为 NW_1。
+
+7. 手机使用 update.ufw 完成 OTA 后，主控能在重启后收到新的 bootInfo，并在有 pending 标记时收到 otaResult。

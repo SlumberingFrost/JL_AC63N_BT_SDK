@@ -35,7 +35,7 @@
 
 #if CONFIG_APP_SPP_LE && CONFIG_BT_GATT_CLIENT_NUM
 
-#if LE_DEBUG_PRINT_EN
+#if LE_DEBUG_PRINT_EN && !CONFIG_AC6323A_LOG_MINIMAL
 #define log_info(x, ...)  printf("[TRANS-SEARCH]" x " ", ## __VA_ARGS__)
 #define log_info_hexdump  put_buf
 
@@ -44,7 +44,11 @@
 #define log_info_hexdump(...)
 #endif
 
+#if CONFIG_AC6323A_LOG_MINIMAL
+#define trans_scan_boot_trace(...)
+#else
 #define trans_scan_boot_trace(fmt, ...) printf("[SCAN-BOOT] " fmt "\r\n", ##__VA_ARGS__)
+#endif
 
 #define SET_SCAN_TYPE       SCAN_ACTIVE
 #define SET_SCAN_INTERVAL   ADV_SCAN_MS(500) // unit: 0.625ms

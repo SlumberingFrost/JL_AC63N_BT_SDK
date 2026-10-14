@@ -16,6 +16,15 @@
 
 #define CONFIG_DEBUG_ENABLE
 
+/*
+ * AC6323A production log profile:
+ * 1: keep UART business responses, suppress verbose boot/scan/RCSP traces.
+ * 0: restore verbose logs for SDK-level debugging.
+ */
+#ifndef CONFIG_AC6323A_LOG_MINIMAL
+#define CONFIG_AC6323A_LOG_MINIMAL          1
+#endif
+
 #define TCFG_MEDIA_LIB_USE_MALLOC		    1
 //apps example 选择,只能选1个,要配置对应的board_config.h
 #define CONFIG_APP_SPP_LE                 1 //SPP + LE or LE's client

@@ -255,12 +255,16 @@ static int trans_cmd_send_literal(const char *text)
 
 static void trans_cmd_set_uuid_trace(const char *stage)
 {
+#if !CONFIG_AC6323A_LOG_MINIMAL
     if (!stage || !stage[0]) {
         return;
     }
     (void)trans_cmd_uart_send_text("TRACE:SETUUID:");
     (void)trans_cmd_uart_send_text(stage);
     (void)trans_cmd_uart_send_text("\r\n");
+#else
+    (void)stage;
+#endif
 }
 
 static char *trans_cmd_find_cmd_anchor(char *text)
@@ -1974,8 +1978,10 @@ void trans_cmd_proc_init(void)
 
     trans_cmd_uart_register_line_handler(trans_cmd_proc_handle_line);
     trans_cmd_proc_inited = 1;
+#if !CONFIG_AC6323A_LOG_MINIMAL
     (void)trans_cmd_uart_send_text(TRANS_CMD_SET_UUID_TRACE_BANNER);
     log_info("proc ready: mode/uuid/badge/lock/setParams/setUuid/scanFilter");
+#endif
 }
 
 #endif

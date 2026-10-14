@@ -265,6 +265,12 @@ int trans_cmd_uart_send_text(const char *text)
 
 static int trans_cmd_uart_send_trace_reason(const char *reason, const uint8_t *buf, uint16_t len)
 {
+#if CONFIG_AC6323A_LOG_MINIMAL
+    (void)reason;
+    (void)buf;
+    (void)len;
+    return 0;
+#else
     static const char hex[] = "0123456789ABCDEF";
     char out[96];
     uint16_t pos = 0;
@@ -293,6 +299,7 @@ static int trans_cmd_uart_send_trace_reason(const char *reason, const uint8_t *b
     }
     out[pos] = '\0';
     return trans_cmd_uart_send_text(out);
+#endif
 }
 
 int trans_cmd_uart_init(void)
@@ -312,8 +319,10 @@ int trans_cmd_uart_init(void)
     uart_db_regiest_recieve_callback(trans_cmd_uart_uart0_rx_callback);
 
     trans_cmd_uart_inited = 1;
+#if !CONFIG_AC6323A_LOG_MINIMAL
     log_info("ready: uart0 baud=%u, tx=%u, rx=%u",
              TRANS_CMD_UART_BAUD_RATE, TCFG_UART0_TX_PORT, TCFG_UART0_RX_PORT);
+#endif
     return 0;
 }
 

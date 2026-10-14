@@ -49,7 +49,11 @@
 #define USE_FS_API_SEL		SDFILE_API_AC693X
 
 
+#if CONFIG_AC6323A_LOG_MINIMAL
+#define CUSTOM_CFG_DEBUG_EN 0
+#else
 #define CUSTOM_CFG_DEBUG_EN 1
+#endif
 #if CUSTOM_CFG_DEBUG_EN
 #define cfg_puts puts
 #define cfg_printf printf
@@ -1519,5 +1523,4 @@ u32 get_authkey_procode_from_cfg_file(u8 *data[], u8 *len, u8 type)
 #endif
 
 #endif
-
 

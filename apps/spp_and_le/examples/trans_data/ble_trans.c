@@ -37,7 +37,7 @@
 
 #if CONFIG_APP_SPP_LE
 
-#if LE_DEBUG_PRINT_EN
+#if LE_DEBUG_PRINT_EN && !CONFIG_AC6323A_LOG_MINIMAL
 #define log_info(x, ...)  printf("[BLE_TRANS]" x " ", ## __VA_ARGS__)
 #define log_info_hexdump  put_buf
 
@@ -46,7 +46,11 @@
 #define log_info_hexdump(...)
 #endif
 
+#if CONFIG_AC6323A_LOG_MINIMAL
+#define trans_boot_trace(...)
+#else
 #define trans_boot_trace(fmt, ...) printf("[SCAN-BOOT] " fmt "\r\n", ##__VA_ARGS__)
+#endif
 
 #if CONFIG_APP_SPP_LE
 #ifndef CONFIG_APP_LE_TRANS
@@ -173,6 +177,7 @@ static void trans_scan_led_tick(void *priv);
 
 static void trans_scan_led_log_sparse_phase(uint8_t led_on, uint32_t hold_ms)
 {
+#if !CONFIG_AC6323A_LOG_MINIMAL
     char msg[80];
     int len = snprintf(msg, sizeof(msg),
                        "{\"tag\":\"LED_SPARSE\",\"phase\":\"%s\",\"holdMs\":%u}\r\n",
@@ -182,6 +187,10 @@ static void trans_scan_led_log_sparse_phase(uint8_t led_on, uint32_t hold_ms)
     if (len > 0 && len < (int)sizeof(msg)) {
         (void)trans_cmd_uart_send_text(msg);
     }
+#else
+    (void)led_on;
+    (void)hold_ms;
+#endif
 }
 
 static void trans_scan_led_apply(uint8_t is_on)

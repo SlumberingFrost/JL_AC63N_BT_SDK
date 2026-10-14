@@ -66,8 +66,8 @@ const char log_tag_const_w_AT_CMD AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_AT_CMD AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_USER_CFG AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_USER_CFG AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_USER_CFG AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_USER_CFG AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_USER_CFG AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_USER_CFG AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_USER_CFG AT(.LOG_TAG_CONST) = 1;
 
@@ -156,7 +156,7 @@ const char log_tag_const_w_COMM_EDR AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_COMM_EDR AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_COMM_BLE AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_COMM_BLE AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_COMM_BLE AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_d_COMM_BLE AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_COMM_BLE AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_COMM_BLE AT(.LOG_TAG_CONST) = 1;
@@ -205,8 +205,8 @@ const char log_tag_const_w_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_GATT_SERVER AT(.LOG_TAG_CONST) = 1;
 
 const char log_tag_const_v_GATT_CLIENT AT(.LOG_TAG_CONST) = 0;
-const char log_tag_const_i_GATT_CLIENT AT(.LOG_TAG_CONST) = 1;
-const char log_tag_const_d_GATT_CLIENT AT(.LOG_TAG_CONST) = 1;
+const char log_tag_const_i_GATT_CLIENT AT(.LOG_TAG_CONST) = 0;
+const char log_tag_const_d_GATT_CLIENT AT(.LOG_TAG_CONST) = 0;
 const char log_tag_const_w_GATT_CLIENT AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_GATT_CLIENT AT(.LOG_TAG_CONST) = 1;
 
@@ -251,4 +251,3 @@ const char log_tag_const_i_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_d_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_w_FINDMY AT(.LOG_TAG_CONST) = 1;
 const char log_tag_const_e_FINDMY AT(.LOG_TAG_CONST) = 1;
-

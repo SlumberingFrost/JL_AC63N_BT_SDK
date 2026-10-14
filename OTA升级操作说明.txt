@@ -1,0 +1,123 @@
+AW6323A/AC6323A OTA 升级操作说明
+
+一、升级包路径
+
+1. 使用 Code::Blocks 工程编译后，标准 OTA 升级包路径：
+   D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\cpu\bd19\tools\download\data_trans\update.ufw
+
+2. 同目录下的一拖八/烧录包路径：
+   D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\cpu\bd19\tools\download\data_trans\jl_isd.fw
+
+3. 手机 OTA 页面应选择 update.ufw，不要选择 jl_isd.fw。
+
+4. 当前 Code::Blocks 工程 post-build 已显式设置 TRANS_DATA_GEN_UFW=1，正常使用 Code::Blocks 编译时会同步生成 update.ufw。
+
+5. 如果设置了 TRANS_DATA_UFW_NAME，脚本仍会保留 update.ufw，并额外复制一份指定名称的 .ufw，便于人工区分模式或版本。
+
+
+二、升级前提
+
+1. 已经烧录到蓝牙芯片中的基础固件必须已经打开 CONFIG_APP_OTA_ENABLE，并且包含 RCSP OTA 服务。
+
+2. 如果设备当前运行的是完全相同的固件，再选择同一个 update.ufw 升级，会被判定为 Same upgrade file，手机端会显示升级失败。
+
+3. 正常 OTA 验证建议采用 A/B 流程：
+   - 先通过烧录器或 Code::Blocks 下载一版基础固件 A。
+   - 修改源码形成明确差异，重新编译生成固件 B 的 update.ufw。
+   - 手机选择固件 B 的 update.ufw 对设备 A 执行 OTA。
+
+4. 当前用于验证 OTA 是否进入新固件的源码差异是启动串口标记：
+   TRACE:OTA:BUILD=20260814_A
+
+
+三、TCFG_AC6323A_PRODUCT_MODE_ADV 模式操作
+
+1. 编译生成 update.ufw。
+
+2. 蓝牙芯片烧录/运行 ADV 模式基础固件。
+
+3. 打开手机端杰理 OTA Demo 或已集成 JL OTA 外接库的 App。
+
+4. 扫描并连接蓝牙设备。
+
+5. 在 App 的升级页面选择：
+   D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\cpu\bd19\tools\download\data_trans\update.ufw
+
+6. 点击升级，等待设备下载 loader、跳转升级并重启。
+
+
+四、TCFG_AC6323A_PRODUCT_MODE_SCAN 模式操作
+
+1. 编译生成 update.ufw。
+
+2. 蓝牙芯片烧录/运行 SCAN 模式基础固件。正常状态下设备保持 scan-only 业务，不主动作为 OTA 外设广播。
+
+3. 主控或串口工具通过 UART0 发送：
+   {"cmd":"setParams","sn":"00010220000002","deviceId":1,"schoolId":1}\r\n
+
+   {"cmd":"enterOta"}\r\n
+
+4. 期望蓝牙芯片串口回包：
+   {"cmd":"setParamsResult","retCode":0,"sn":"00010220000002","deviceId":1,"schoolId":1}
+
+   {"cmd":"enterOtaResult","retCode":0,"enable":1}
+
+5. 此时蓝牙芯片会停止扫描业务，打开可连接广播和 RCSP OTA GATT 服务。
+
+6. 打开手机端杰理 OTA Demo 或已集成 JL OTA 外接库的 App，扫描并连接蓝牙设备。
+
+7. 在 App 的升级页面选择：
+   D:\RD\AC63N_BT\fw-AC63_BT_SDK-master\cpu\bd19\tools\download\data_trans\update.ufw
+
+8. 点击升级，等待设备下载 loader、跳转升级并重启。
+
+
+五、升级成功标志
+
+1. 升级过程中可看到 loader 下载成功相关日志：
+   succ report stored
+   >>>rcsp_stop:2, 80
+   update_flag:1
+   BLE_APP_UPDATE
+
+2. 其中 >>>rcsp_stop:2, 80 的 0x80 表示 loader 下载成功状态，不是失败。
+
+3. 随后设备会断开 BLE 并复位重启。
+
+4. 重启后，如果串口启动日志出现：
+   TRACE:OTA:BUILD=20260814_A
+   表示设备已经运行到带新源码差异的固件，可认为本次 OTA 成功。
+
+5. SCAN 模式升级成功后，重启应回到 scan-only 正常业务，并重新看到扫描启动日志。
+
+
+六、常见失败判断
+
+1. Same upgrade file：
+   - 手机端可能显示 code: 16399(0x400F), Same upgrade file。
+   - 设备端常见日志为 >>>rcsp_stop:2, 9。
+   - 含义是当前 update.ufw 与设备内已有固件被判定为相同升级文件。
+   - 处理方式是修改源码或版本标记后重新编译生成新的 update.ufw。
+
+2. 未生成 update.ufw：
+   - 如果输出目录只有 jl_isd.fw，没有 update.ufw，说明 TRANS_DATA_GEN_UFW 没有生效或打包流程没有跑到 UFW 生成阶段。
+   - 当前 Code::Blocks 工程已设置 TRANS_DATA_GEN_UFW=1；如果仍未生成，需要检查编译日志中是否出现 ufw_maker.exe 和 copy jl_isd.ufw update.ufw。
+
+3. 连接成功但未开始升级：
+   - 只能说明手机已经连接 RCSP OTA 服务。
+   - 还需要在 App 中选择正确 update.ufw 并点击升级，日志进入 GET_DEVICE_UPDATE_FILE_INFO_OFFSET / INQUIRE_DEVICE_IF_CAN_UPDATE / single bank update 后才表示实际升级流程开始。
+
+
+七、日志精简建议
+
+1. 当前源码已默认开启 CONFIG_AC6323A_LOG_MINIMAL=1，关闭大部分 scan-only 启动日志、GATT_CLIENT 调试日志和 RCSP OTA 传输过程日志。
+
+2. 精简模式下，OTA 过程只保留少量必要提示：
+   OTA:LOADER_OK
+   OTA:UPDATE_ERR=...
+   OTA:BLE_APP_UPDATE
+   TRACE:OTA:BUILD=20260814_A
+
+3. 最可靠的升级完成提示不是升级前的下载日志，而是重启后新固件主动输出的版本/构建标记。
+
+4. 如果后续需要恢复详细调试日志，将 CONFIG_AC6323A_LOG_MINIMAL 改为 0 后重新编译即可。
