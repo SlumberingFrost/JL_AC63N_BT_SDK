@@ -62,6 +62,7 @@ cscope.out
 文档/System.log
 
 # AC6323A bd19 generated build outputs
+/apps/spp_and_le/board/bd19/012AC690X-8029.key
 /apps/spp_and_le/board/bd19/AC632N_spp_and_le.depend
 /apps/spp_and_le/board/bd19/AC632N_spp_and_le.layout
 /cpu/bd19/tools/app.bin
